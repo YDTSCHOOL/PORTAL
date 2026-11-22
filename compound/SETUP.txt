@@ -1,0 +1,61 @@
+COMPOUND 3.2 - LAUNCH CHECKLIST
+
+1. SUPABASE (your SCHOOL project)
+   a. Database > Extensions: search "pg_net" and turn it on. (Needed for help emails.)
+   b. SQL Editor > New query: paste ALL of setup.sql and click Run. It should say Success.
+      Safe to run again any time. If the paste gets cut off, run it in parts at the
+      "END OF PART" lines, in order.
+
+2. RESEND (for help emails)
+   a. Sign in at resend.com (you already have an account).
+   b. API Keys > Create API Key. Copy the key (starts with re_). You only see it once.
+   c. Emails can only go to the email address you signed up to Resend with,
+      unless you verify your own domain in Resend.
+
+3. NETLIFY
+   a. Unzip, then drag the "compound" folder onto Netlify (Add new site > Deploy manually).
+   b. Copy the site address (ends in .netlify.app).
+
+4. SCHOOL PORTAL
+   a. Make sure the student is in the portal with a first name and PIN.
+   b. Add a program called Compound with the Netlify address, and tick it for him.
+
+5. TEACHER VIEW (on the Compound sign-in screen, click Teacher, use your portal password)
+   a. Daily lock: should show On, closes 3:10 PM, reopens 4:15 PM. Click Save once.
+   b. Help emails: type your Resend sign-up email and paste the re_ key. Save.
+   c. Click Send test email. Check your inbox and spam folder.
+
+6. TEST ON HIS CHROMEBOOK (before his first class)
+   a. Easiest: add a test student in the portal and sign in as that student.
+   b. Go through the orientation, start week 1 day 1, check the video plays.
+   c. On a practice question: press Hint, then Set it up, then the gold
+      "Still stuck? Email my teacher" button. You should get the email.
+   d. Open the email, click the REPLY TO HIM HERE link, enter your teacher password,
+      type a reply and press Send reply. Sign in as the student again: the reply
+      shows up first, before the lesson.
+   e. In the Teacher view, press Reset on the test student when you're done.
+   f. If you tested with HIS account instead, press Reset on him so he starts fresh.
+
+7. FIRST DAY
+   He signs in, the orientation opens by itself, and week 1 starts when he finishes it.
+
+REPLYING TO HIM
+  Every help email has a "REPLY TO HIM HERE" link. Click it, enter your teacher password,
+  type your reply and press Send reply. (Pressing Reply in your email app does NOT reach him.)
+  You can also reply from the Teacher view: the right side now has a "Help requests" tab.
+  He sees your reply the next time he signs in, before his lesson starts, and you can see
+  when he has read it.
+
+FILES IN THIS FOLDER
+  index.html, styles.css, app.js   the program
+  core.js                          settings (videos on/off, goals, pass marks)
+  content-1.js to content-6.js     all 25 weeks
+  walk.js                          animated walkthroughs (days without a video)
+  videos.js                        Khan Academy videos (Sal Khan only; some days have none)
+  orientation.js                   the first-day welcome tour
+  coach.js                         Set it up, mistake feedback, help emails
+  messages.js                      Messages page and teacher replies
+  setup.sql                        the database setup
+
+VIDEOS ON OR OFF: in core.js, const USE_VIDEOS = true; or false;. Upload again after changing.
+TRY IT WITHOUT SIGNING IN: add ?demo to the end of the address (nothing is saved).
