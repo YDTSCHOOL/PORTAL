@@ -36,7 +36,7 @@ function walkScenes(w,d,seed){
     scenes.push({tag:`Example ${i+1}`, title:i===0?"Watch it done":"One more, with new numbers", beats});
   });
   scenes.push({tag:"Your turn", title:"Now you try", beats:[
-    {k:"lead", h:"Next comes the lesson, one step at a time. Then 10 practice problems with new numbers."},
+    {k:"lead", h:"Next comes the lesson, one step at a time. Then a couple of quick decisions and today's Case File."},
     {k:"item", h:`You need <b>${MASTERY}%</b> on practice for today to count.`},
     {k:"item", h:"Stuck? Use <b>Hint</b> first, then <b>Set it up</b>. Your teacher is one email away."},
     {k:"item", h:"Work it on paper the way you just saw it done. Keep every decimal until the last step."}]});

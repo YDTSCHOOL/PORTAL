@@ -171,7 +171,7 @@ function renderDash(){
   if(nx.none){ next=`<span class="eyebrow">Up next: week ${nx.w}</span><h2>${esc(WEEKS[nx.w-1].title)}</h2><p class="muted">You've finished every lesson that's ready. This week is being written now. Until it arrives, sharpen your skills: retake bosses for a faster time, or redo any day for a higher score.</p><div style="margin-top:auto"><button class="btn" id="goCourse">Open the course</button></div>`; }
   else { const D=WEEKS[nx.w-1].days[nx.d-1];
     next=`<span class="eyebrow">${nx.resume?"Resume":"Up next"}: week ${nx.w}, day ${nx.d}</span><h2>${esc(D.title)}</h2><p class="muted" style="margin:0">${esc(D.desc)}. ${esc(WEEKS[nx.w-1].title)}.</p>
-      <div class="next-meta"><span>${D.quiz?"Weekly quiz: 10 questions":(hasVid(nx.w,nx.d)?"Video, lesson, 10 practice problems, Deep Dive":hasWalk(nx.w,nx.d)?"Walkthrough, lesson, 10 practice problems, Deep Dive":"Lesson, 10 practice problems, Deep Dive")}</span><span>About 35 to 40 minutes</span><span>${D.quiz?`Pass mark ${PASS_MARK}%`:`Mastery ${MASTERY}%`}</span></div>
+      <div class="next-meta"><span>${D.quiz?(CASES[key(nx.w,1)]?(QUIZ_CALC?`Weekly quiz: ${QUIZ_CALC} problems, ${10-QUIZ_CALC} reading questions`:"Weekly quiz: 10 reading and decision questions"):"Weekly quiz: 10 questions"):`${hasVid(nx.w,nx.d)?"Video, lesson":hasWalk(nx.w,nx.d)?"Walkthrough, lesson":"Lesson"}, ${CASES[key(nx.w,nx.d)]?(n=>n?`${n} quick ${PRACTICE_CALC?"practice problem":"decision question"}${n>1?"s":""}, Case File`:"Case File")(dayPractice(nx.w,nx.d,D).length):"10 practice problems"}, Deep Dive`}</span><span>About 35 to 40 minutes</span><span>${D.quiz?`Pass mark ${PASS_MARK}%`:`Mastery ${MASTERY}%`}</span></div>
       <div class="next-row"><button class="btn" id="goNext">${nx.resume?"Resume":"Start"} day ${nx.d}</button>
       <div class="goal ${tA.n>0?"met":""}"><span class="dot"></span><span>${tA.n>0?(tA.n>1?`Today's goal met with ${tA.n} days finished. You're ahead of pace.`:`Today's goal met. Keep going: a second day today earns a ${AHEAD_BONUS}‑point ahead‑of‑pace bonus.`):"Today's goal: finish one full lesson day."}</span></div></div>`; }
   const days=[...Array(10)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-9+i);return d});
@@ -253,10 +253,35 @@ function renderTrophies(){
 
 /* ================= Lesson engine ================= */
 let L=null;
-function buildQs(day,seed){
+/* Which generators are multiple choice (concept) rather than calculation */
+const MCG={};
+function isMC(g){ if(MCG[g]===undefined){const old=RNG; const r=mulberry(7); RNG=r; try{MCG[g]=!!G[g](r).choices}catch(e){MCG[g]=false} RNG=old} return MCG[g] }
+/* Short practice: a couple of calculations and one concept question, in the day's original order */
+function dayPractice(w,d,day){
+  if(!CASES[key(w,d)]) return day.practice;
+  const u=[...new Set(day.practice)];
+  const calc=u.filter(g=>!isMC(g)).slice(0,PRACTICE_CALC), mc=u.filter(isMC).slice(0,PRACTICE_CONCEPT);
+  return u.filter(g=>calc.includes(g)||mc.includes(g));
+}
+/* A reading question with its choices shuffled (correct answer is listed first in the content) */
+function readQ(rng,src,extra){
+  const order=shuffle(rng,src.choices.map((_,i)=>i));
+  return Object.assign({q:src.q,choices:order.map(i=>src.choices[i]),correct:order.indexOf(0),hint:src.hint||"Look back at the reading. The answer is in it.",steps:[src.why],reading:true},extra||{});
+}
+function buildQs(day,seed,w,d){
   const rng=mulberry(seed); RNG=rng;
-  const list = day.quiz ? shuffle(rng,day.quizFrom).slice(0,10) : day.practice;
-  return list.map(g=>{const q=G[g](rng); if(q.correctText) q.correct=q.choices.indexOf(q.correctText); return q});
+  const gen=g=>{const q=G[g](rng); if(q.correctText) q.correct=q.choices.indexOf(q.correctText); return q};
+  if(day.quiz){
+    const cs=[1,2,3].map(n=>CASES[key(w,n)]).filter(Boolean), dv=[1,2,3].map(n=>DIVES[key(w,n)]).filter(Boolean);
+    if(!cs.length) return shuffle(rng,day.quizFrom).slice(0,10).map(gen);
+    const calc=shuffle(rng,[...new Set(day.quizFrom)]).slice(0,QUIZ_CALC).map(gen);
+    const caseQs=shuffle(rng,cs.flatMap(c=>c.qs.slice(3))).slice(0,Math.ceil((10-QUIZ_CALC)/2)), diveQs=shuffle(rng,dv.flatMap(x=>x.qs.map(q=>({q:q.q,choices:q.choices,why:q.why})))).slice(0,10-QUIZ_CALC-caseQs.length);
+    const reading=[...caseQs,...diveQs].map(src=>readQ(rng,src));
+    return shuffle(rng,[...calc,...reading]);
+  }
+  const k=key(w,d), qs=dayPractice(w,d,day).map(gen), cf=CASES[k];
+  if(cf) cf.qs.forEach((src,i)=>qs.push(readQ(rng,src,{kase:k,first:i===0})));
+  return qs;
 }
 const hasVid=(w,d)=>USE_VIDEOS&&!!VIDEOS[key(w,d)];
 function allowed(w,d){const nx=upNext(); return !nx.none&&nx.w===w&&nx.d===d}
@@ -264,18 +289,19 @@ function openDay(w,d){
   if(needsOrientation()){openOrientation();return}
   if(!allowed(w,d)){toast("Finished lessons are locked. Keep moving forward.");return}
   const day=WEEKS[w-1].days[d-1];
-  if(S.cur&&S.cur.w===w&&S.cur.d===d){L=Object.assign({},S.cur)}
+  if(S.cur&&S.cur.w===w&&S.cur.d===d){L=Object.assign({},S.cur);
+    if(L.qv!==QV&&(L.phase==="practice"||L.phase==="dive")){L.phase="practice";L.qi=0;L.pts=0;L.res=[];L.combo=0;L.bonus=0;L.maxCombo=0;L.qh={};delete L.diveScore}}
   else{L={w,d,seed:Math.floor(Math.random()*1e9),phase:hasVid(w,d)?"video":(hasWalk(w,d)?"walk":"learn"),step:0,seen:0,qi:0,pts:0,res:[],combo:0,bonus:0,maxCombo:0}; save("start",`Week ${w} day ${d}: ${day.title}`)}
-  L.day=day; L.qs=buildQs(day,L.seed); L.tries=0; L.answered=false; L.boss=false; L.seen=L.seen||0;
+  L.day=day; L.qs=buildQs(day,L.seed,w,d); L.tries=0; L.answered=false; L.boss=false; L.seen=L.seen||0;
   if(L.phase==="dive") L.diveT0=Date.now();
   persistCur(); renderLesson(); show("lesson");
 }
-function persistCur(){if(L.boss)return; S.cur={w:L.w,d:L.d,seed:L.seed,phase:L.phase,step:L.step,seen:L.seen,qi:L.qi,pts:L.pts,res:L.res,combo:L.combo,bonus:L.bonus,maxCombo:L.maxCombo}; save()}
+function persistCur(){if(L.boss)return; S.cur={qv:QV,w:L.w,d:L.d,seed:L.seed,phase:L.phase,step:L.step,seen:L.seen,qi:L.qi,pts:L.pts,res:L.res,combo:L.combo,bonus:L.bonus,maxCombo:L.maxCombo}; save()}
 function renderTrack(){
   let html="";
   if(!L.boss&&(hasVid(L.w,L.d)||hasWalk(L.w,L.d)||L.phase==="walk")){html+=`<i class="${L.phase==="video"||L.phase==="walk"?"h":"f"}" style="flex:3"></i><span style="width:8px"></span>`}
   if(!L.boss){L.day.steps.forEach((_,i)=>html+=`<i class="${(L.phase!=="learn"&&L.phase!=="video"&&L.phase!=="walk")||(L.phase==="learn"&&i<=L.step)?"f":""}"></i>`); html+=`<span style="width:8px"></span>`}
-  L.qs.forEach((_,i)=>{const r=L.res[i];html+=`<i class="${r===undefined?(L.phase==="practice"&&i===L.qi?"h":""):r>=1?"r":r>0?"h":"w"}"></i>`});
+  L.qs.forEach((q,i)=>{if(q.first)html+=`<span style="width:8px"></span>`; const r=L.res[i];html+=`<i class="${r===undefined?(L.phase==="practice"&&i===L.qi?"h":""):r>=1?"r":r>0?"h":"w"}"></i>`});
   if(!L.boss&&!L.day.quiz&&DIVES[key(L.w,L.d)]){html+=`<span style="width:8px"></span><i class="${L.phase==="dive"?"h":""}" style="flex:3"></i>`}
   $("lTrack").innerHTML=html;
   const ans=L.res.filter(x=>x!==undefined);
@@ -296,7 +322,7 @@ function renderLesson(){
     const st=L.day.steps[L.step], last=L.step===L.day.steps.length-1;
     $("lPhase").textContent=`Lesson, step ${L.step+1} of ${L.day.steps.length}`;
     $("lLeft").innerHTML=`<h2>${st.h}</h2>${st.t}`; $("lRight").innerHTML=st.b();
-    const label=last?(L.day.quiz?"Start the quiz":"Start practice"):"Next step";
+    const label=last?(L.day.quiz?"Start the quiz":(L.qs[0]&&L.qs[0].kase?"Open the Case File":"Start the questions")):"Next step";
     $("lNav").innerHTML=`<button class="btn ghost" id="nBack" ${L.step===0?"disabled":""}>Back</button><span class="spacer"></span><button class="btn" id="nNext">${label}</button>`;
     $("nBack").onclick=()=>{L.step--;renderLesson()};
     $("nNext").onclick=()=>{L.seen=Math.max(L.seen,L.step+1); if(last){L.phase="practice";L.qi=0}else L.step++; persistCur(); renderLesson()};
@@ -311,9 +337,22 @@ function formulaCards(){ if(L.day.quiz||L.boss) return "";
   const f=[...new Set(L.day.steps.flatMap(s=>[...s.t.matchAll(/<div class="formula">(.*?)<\/div>/g)].map(m=>m[1])))];
   return f.length?`<h4 style="margin-top:4px">Formulas from the lesson</h4><div class="fcards">${f.slice(0,4).map(x=>`<div class="fcard">${x}</div>`).join("")}</div>`:"";
 }
+function caseQuestion(q){
+  const C=CASES[q.kase], first=L.qs.findIndex(x=>x.kase), n=L.qs.length-first;
+  $("lPhase").textContent=`Case File, question ${L.qi-first+1} of ${n}`;
+  $("lBody").className="dive"; $("lLeft").className="col read";
+  $("lLeft").innerHTML=`<span class="eyebrow">Case File</span><h2>${esc(C.title)}</h2>${C.sections.map(s=>`<h3>${esc(s[0])}</h3><p>${esc(s[1])}</p>`).join("")}`;
+  $("lRight").innerHTML=`<div class="board" id="qBox"><span class="eyebrow">Question ${L.qi-first+1} of ${n}</span><p class="q" style="margin-top:6px">${esc(q.q)}</p><div class="choices" id="choices">${q.choices.map((c,i)=>`<button class="choice" data-i="${i}">${esc(c)}</button>`).join("")}</div><div id="fb"></div></div>`;
+  if(q.first&&!L.caseT0) L.caseT0=Date.now();
+  navForQuestion();
+  $("choices").querySelectorAll(".choice").forEach(b=>b.onclick=()=>{if(L.answered)return;$("choices").querySelectorAll(".choice").forEach(x=>x.classList.remove("picked"));b.classList.add("picked")});
+}
 function renderQuestion(){
   const q=L.qs[L.qi];
-  $("lPhase").textContent=`${L.boss?"Boss":L.day.quiz?"Quiz":"Practice"}, question ${L.qi+1} of ${L.qs.length}`;
+  if(q.kase){caseQuestion(q);return}
+  $("lBody").className="lbody"; $("lLeft").className="col lesson-text";
+  const nP=L.qs.filter(x=>!x.kase).length;
+  $("lPhase").textContent=`${L.boss?"Boss":L.day.quiz?"Quiz":PRACTICE_CALC?"Practice":"Decisions"}, question ${L.qi+1} of ${nP}`;
   const ansUI = q.choices ? `<div class="choices" id="choices">${q.choices.map((c,i)=>`<button class="choice" data-i="${i}">${esc(c)}</button>`).join("")}</div>`
     : `<div class="ansrow">${q.unit==="$"?'<span class="unit">$</span>':""}<input id="ans" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit&&q.unit!=="$"?`<span class="unit">${q.unit}</span>`:""}</div>`;
   $("lLeft").innerHTML=`<p class="q">${q.q}</p>${ansUI}<div id="fb"></div>`;
@@ -326,18 +365,23 @@ function renderQuestion(){
 function navForQuestion(){
   const test=L.day.quiz||L.boss;
   const q=L.qs[L.qi];
-  $("lNav").innerHTML=`${test?"":`<button class="btn ghost" id="nHint">Hint</button>${q.choices||L.answered?"":`<button class="btn ghost" id="nSetup">Set it up</button>`}<button class="btn ghost" id="nLesson">Review lesson</button>${stuckReady()?`<button class="btn gold" id="nStuck">Still stuck? Email my teacher</button>`:""}`}<span class="spacer"></span>${L.answered?`<button class="btn" id="nNext">${L.qi===L.qs.length-1?"Continue":"Next question"}</button>`:`<button class="btn" id="nCheck">Check answer</button>`}`;
+  clearInterval(stepTimer);
+  $("lNav").innerHTML=`${test?"":`<button class="btn ghost" id="nHint">Hint</button>${q.choices||L.answered?"":`<button class="btn ghost" id="nSetup">Set it up</button>`}${q.kase?"":`<button class="btn ghost" id="nLesson">Review lesson</button>`}${stuckReady()?`<button class="btn gold" id="nStuck">Still stuck? Email my teacher</button>`:""}`}<span class="spacer"></span>${L.answered?`<button class="btn" id="nNext">${L.qi===L.qs.length-1?"Continue":"Next question"}</button>`:`<button class="btn" id="nCheck">Check answer</button>`}`;
   if(!test){
     $("nHint").onclick=()=>{qHelp().hint=true; $("fb").innerHTML=`<div class="fb hint"><b>Hint.</b> ${q.hint}</div>`; navForQuestion()};
     if($("nSetup")) $("nSetup").onclick=()=>{qHelp().setup=true; const lines=setupLines(q);
       $("fb").innerHTML=`<div class="fb hint"><b>Set it up.</b> Here's how to set up the problem. You fill in each <span class="qmark">?</span>.${lines.length?`<ol>${lines.map(x=>`<li>${x}</li>`).join("")}</ol>`:`<br>${q.hint}`}</div>`; navForQuestion()};
-    $("nLesson").onclick=reviewLesson;
+    if($("nLesson")) $("nLesson").onclick=reviewLesson;
     if($("nStuck")) $("nStuck").onclick=showStuckForm;
   }
   if(L.answered) $("nNext").onclick=next; else $("nCheck").onclick=check;
+  if(q.kase&&q.first&&!L.answered&&!DEMO_FAST&&L.caseT0){ const b=$("nCheck");
+    const tick=()=>{const left=Math.ceil((CASE_SECONDS*1000-(Date.now()-L.caseT0))/1000); if(left>0){b.disabled=true;b.textContent=`Read first (${left})`} else {b.disabled=false;b.textContent="Check answer";clearInterval(stepTimer)}};
+    tick(); stepTimer=setInterval(tick,1000) }
 }
 function reviewLesson(){
   let i=0; const tries=L.tries;
+  $("lBody").className="lbody"; $("lLeft").className="col lesson-text";
   const draw=()=>{const st=L.day.steps[i];$("lPhase").textContent=`Reviewing step ${i+1} of ${L.day.steps.length}`;$("lLeft").innerHTML=`<h2>${st.h}</h2>${st.t}`;$("lRight").innerHTML=st.b();
     $("lNav").innerHTML=`<button class="btn ghost" id="rB" ${i===0?"disabled":""}>Back</button><button class="btn ghost" id="rN" ${i===L.day.steps.length-1?"disabled":""}>Next step</button><span class="spacer"></span><button class="btn" id="rDone">Back to question</button>`;
     $("rB").onclick=()=>{i--;draw()};$("rN").onclick=()=>{i++;draw()};$("rDone").onclick=()=>{renderQuestion();L.tries=tries}};
@@ -402,7 +446,7 @@ function renderVideo(){
   const go=$("vGo"); go.onclick=()=>{stopVideo(); L.phase="learn"; L.step=0; persistCur(); renderLesson()};
   const unlock=(why)=>{go.disabled=false; if(why==="done"&&!S.vid[k]){S.vid[k]=1; save("video",`Week ${L.w} day ${L.d} video watched: ${V.title}`)}};
   if(DEMO_FAST) unlock("fast");
-  const blocked=(reason)=>{stopVideo(); $("vmsg").hidden=false; $("vmsg").innerHTML=`<b>This video can't play on this computer.</b><br>${reason}<br>${walkable(L.w,L.d)?`<button class="btn small" id="vWalk" style="margin-top:10px">Watch the walkthrough instead</button><br>`:""}Or go straight to the lesson.`; if($("vWalk")) $("vWalk").onclick=()=>{stopVideo(); L.phase="walk"; persistCur(); renderLesson()}; $("vtxt").textContent="Video unavailable here."; unlock("blocked");
+  const blocked=(reason)=>{if(!$("vmsg")||L.phase!=="video")return; stopVideo(); $("vmsg").hidden=false; $("vmsg").innerHTML=`<b>This video can't play on this computer.</b><br>${reason}<br>${walkable(L.w,L.d)?`<button class="btn small" id="vWalk" style="margin-top:10px">Watch the walkthrough instead</button><br>`:""}Or go straight to the lesson.`; if($("vWalk")) $("vWalk").onclick=()=>{stopVideo(); L.phase="walk"; persistCur(); renderLesson()}; $("vtxt").textContent="Video unavailable here."; unlock("blocked");
     if(!L.vBlockedLogged){L.vBlockedLogged=true; save("video blocked",`Week ${L.w} day ${L.d}: ${V.title}`)}};
   loadYT().then(()=>{
     if(L.phase!=="video") return;
@@ -453,9 +497,11 @@ let bossTimer=null;
 function stopTimer(){clearInterval(autoT);clearInterval(bossTimer);bossTimer=null;clearInterval(stepTimer);$("lTimer").hidden=true;stopVideo()}
 function openBoss(w,d){
   const day=WEEKS[w-1].days[d-1], seed=Math.floor(Math.random()*1e9), rng=mulberry(seed); RNG=rng;
-  const list=shuffle(rng,[...new Set(day.practice)]).slice(0,BOSS_QS);
-  L={w,d,day,seed,boss:true,phase:"practice",step:0,qi:0,pts:0,res:[],tries:0,answered:false,combo:0,bonus:0,maxCombo:0,
-     qs:list.map(g=>{const q=G[g](rng);if(q.correctText)q.correct=q.choices.indexOf(q.correctText);return q}),t0:Date.now()};
+  const cf=CASES[key(w,d)], noCalc=!PRACTICE_CALC&&cf;
+  const list=noCalc?[]:shuffle(rng,[...new Set(day.practice)]).slice(0,BOSS_QS);
+  const qs=noCalc?shuffle(rng,[...cf.qs.map(src=>readQ(rng,src)),...shuffle(rng,[...new Set(day.practice)].filter(isMC)).slice(0,3).map(g=>{const q=G[g](rng);if(q.correctText)q.correct=q.choices.indexOf(q.correctText);return q})]).slice(0,BOSS_QS)
+    :list.map(g=>{const q=G[g](rng);if(q.correctText)q.correct=q.choices.indexOf(q.correctText);return q});
+  L={w,d,day,seed,boss:true,phase:"practice",step:0,qi:0,pts:0,res:[],tries:0,answered:false,combo:0,bonus:0,maxCombo:0,qs,t0:Date.now()};
   save("boss start",`Week ${w} day ${d} boss`);
   stopTimer(); $("lTimer").hidden=false;
   const tick=()=>{const left=BOSS_SECONDS-Math.floor((Date.now()-L.t0)/1000), m=Math.max(0,left);
@@ -526,14 +572,14 @@ function finishDay(timedOut){
     save("quiz",`Week ${w} quiz: ${pct}% ${passed?"passed":"not passed"}`);
   } else if(passed){ title="Day complete"; msg = d<4?`Day ${d+1} is now open.`:"";
     pushHist(`W${w} D${d}`,day.title,pct+"%",true);
-    save("finish",`Week ${w} day ${d}: practice ${pct}%${dive!==null?`, Deep Dive ${dive}/3`:""}`);
-  } else { title="Not mastered yet"; msg=`A lesson day needs ${MASTERY}% on practice to count. Redo it with new numbers. Use Review lesson and the hints.`;
+    save("finish",`Week ${w} day ${d}: practice and Case File ${pct}%${dive!==null?`, Deep Dive ${dive}/3`:""}`);
+  } else { title="Not mastered yet"; msg=`A lesson day needs ${MASTERY}% on practice and the Case File to count. Redo it with new numbers. Use the hints, and read the Case File closely.`;
     pushHist(`W${w} D${d}`,day.title,pct+"%",false);
     save("finish",`Week ${w} day ${d}: practice ${pct}%, below mastery, must redo`);
   }
   const after=rankOf(S.xp), nr=nextRank(S.xp);
   $("resBox").innerHTML=`<h2>${title}</h2><div class="big">${pct}% ${gchip(pct,true)}</div>
-   <div class="split"><div><b>${day.quiz?`${s} / ${total}`:`${s} / ${total}`}</b><span>${day.quiz?"Quiz score":"Practice points"}</span></div><div><b>${dive!==null?dive+" / 3":day.quiz?"None":"Not taken"}</b><span>Deep Dive</span></div><div><b>+${gained}</b><span>Points earned</span></div></div>
+   <div class="split"><div><b>${day.quiz?`${s} / ${total}`:`${s} / ${total}`}</b><span>${day.quiz?"Quiz score":"Practice and Case File"}</span></div><div><b>${dive!==null?dive+" / 3":day.quiz?"None":"Not taken"}</b><span>Deep Dive</span></div><div><b>+${gained}</b><span>Points earned</span></div></div>
    <p>${L.bonus?`Includes ${L.bonus} combo bonus points. `:""}${extra.join(", ")}${extra.length?". ":""}${after!==before?"":nr?`${nr[0]-S.xp} points to ${nr[1]}.`:""}</p>
    ${after!==before?`<div class="rankup">Promoted to ${after}</div>`:""}
    ${got.length?`<div class="trophies">${got.map(t=>`<span class="trophy">${t}</span>`).join("")}</div>`:""}<p>${msg}</p>
@@ -564,14 +610,15 @@ const HELP_PHASES={
  walk:["Watching the walkthrough","<p>The walkthrough plays by itself: today's plan, the big ideas, the formulas, and two problems worked out step by step with fresh numbers. Use <b>Pause</b>, <b>Back</b> and <b>Replay part</b> anytime, and click any part in the list on the right to rewatch it.</p><p>Watch to the end to unlock the lesson. If your Chromebook has a male voice installed, <b>Read aloud</b> will narrate it.</p>"],
  video:["Watching the video","<p>Press play and watch at least "+Math.round(WATCH_REQUIRED*100)+"% of the video. The progress bar on the right fills as you watch. Skipping ahead doesn't count.</p><p>Read the <b>Listen for</b> questions first so you know what to pay attention to. If the video won't play, a message appears and you can go straight to the lesson.</p>"],
  learn:["Reading the lesson","<p>Read the left side first, then study the worked example on the right. Each new step stays on screen for a few seconds before Next unlocks.</p><p>The gold boxes are formulas. You'll find all of them in the Library later. Use Back to reread an earlier step in this lesson.</p>"],
- practice:["Practice problems","<p><b>Hint</b> gives you a nudge without giving away the answer. <b>Review lesson</b> shows the lesson steps again.</p><p>You get two tries. Right the first time earns 1 point, right the second time earns ½, and after that you'll see the worked solution. You need "+MASTERY+"% for the day to count.</p>"],
- quiz:["The weekly quiz","<p>10 questions, one try each, no hints. You need "+PASS_MARK+"% to open next week. If you don't make it, you retake the quiz with new numbers. The calculator is still available.</p>"],
+ practice:["Decision questions","<p>These questions ask you to make a call: which deal is better, what a term means, what someone should do. Pick an answer. After you answer, you'll see the numbers worked out for you.</p><p><b>Hint</b> gives you a nudge without giving away the answer. <b>Review lesson</b> shows the lesson steps again.</p><p>You get two tries. Right the first time earns 1 point, right the second time earns ½, and after that you'll see the worked solution. You need "+MASTERY+"% for the day to count.</p>"],
+ kase:["Case File","<p>A Case File is a short real‑life story about a money decision. Read the whole file first: the first question unlocks after "+CASE_SECONDS+" seconds.</p><p>The questions ask you to think, not calculate: what went wrong, what's the smarter choice, and why. You get two tries, and <b>Hint</b> points you to the right part of the story.</p>"],
+ quiz:["The weekly quiz","<p>10 questions, one try each, no hints"+(QUIZ_CALC?": "+QUIZ_CALC+" problems and "+(10-QUIZ_CALC)+" reading questions":", all pick‑an‑answer")+" from this week's Case Files and Deep Dives. You need "+PASS_MARK+"% to open next week. If you don't make it, you retake the quiz with a new mix. The calculator is still available.</p>"],
  boss:["Boss round","<p>5 questions, 2 minutes, no hints. Get "+BOSS_WIN+" right before time runs out to win. It's optional, and every try has new numbers.</p>"],
  dive:["Deep Dive","<p>Read all three sections before answering. The questions are about details in the reading, so scan back to find each answer. Answers unlock after "+DIVE_SECONDS+" seconds. Each one is worth 10 points.</p>"]
 };
 function helpContext(){
   if(CUR_SCREEN==="lesson"&&OR&&$("lTitle").textContent==="Course orientation") return ["Orientation","<p>This tour explains what the course is about and what is expected of you. Read each step, then answer the three quick‑check questions to start week 1. You can open it again later from Help.</p>"];
-  if(CUR_SCREEN==="lesson"&&L){ if(L.boss) return HELP_PHASES.boss; if(L.phase==="practice") return L.day.quiz?HELP_PHASES.quiz:HELP_PHASES.practice; return HELP_PHASES[L.phase]||HELP_PHASES.learn }
+  if(CUR_SCREEN==="lesson"&&L){ if(L.boss) return HELP_PHASES.boss; if(L.phase==="practice") return L.day.quiz?HELP_PHASES.quiz:(L.qs[L.qi]&&L.qs[L.qi].kase?HELP_PHASES.kase:HELP_PHASES.practice); return HELP_PHASES[L.phase]||HELP_PHASES.learn }
   return HELP_PAGES[CUR_SCREEN]||HELP_PAGES.dash;
 }
 function openHelp(){

@@ -5,7 +5,7 @@ const SUPABASE_URL = "https://belathxxgwayxdmiqvpd.supabase.co";   // SCHOOL pro
 const SUPABASE_KEY = "sb_publishable_Kxuxi919RbsmEk-p8iNt-w_zm6BsRI9"; // public key, safe to keep here
 const IDLE_MINUTES = 20;   // signs out after this long with no activity
 const PASS_MARK = 80;      // quiz percent needed to open the next week
-const VERSION = "3.2 (Nov 2026)";
+const VERSION = "3.4 (Nov 2026)";
 const MASTERY = 70;       // practice percent needed for a day to count
 const STEP_SECONDS = 8;   // a new lesson step must stay on screen this long
 const DIVE_SECONDS = 40;  // reading time before Deep Dive answers can be checked
@@ -16,6 +16,11 @@ const DEFAULT_LOCK = {on:true, close:"15:10", open:"16:15"};
 const CLOSE_WARN_MINUTES = 5; // warning shown this many minutes before closing
 const USE_VIDEOS = true;  // true: Khan Academy videos open each lesson day. false: no videos.
 const USE_WALKTHROUGHS = true; // animated step-by-step tutorial on lesson days without a video
+const PRACTICE_CALC = 0;    // typed calculation problems per lesson day (0 = none; the math is shown, not asked)
+const PRACTICE_CONCEPT = 2; // decision and concept questions per lesson day (pick an answer, no typing)
+const CASE_SECONDS = 45;    // reading time before the first Case File question can be checked
+const QUIZ_CALC = 0;        // weekly quiz: typed calculation problems; the rest are reading and decision questions
+const QV = 3;               // question-set version, so a lesson saved under the old setup restarts cleanly
 const WATCH_REQUIRED = 0.85; // share of a video that must be played before the lesson unlocks
 
 /* ================= Helpers ================= */
@@ -76,4 +81,8 @@ const WEEKS = OUTLINE.map((t,i)=>({title:t,days:null}));
 const G = {};        // question generators, added by content files
 const DIVES = {};    // Deep Dive readings, keyed "week-day"
 const GLOSSARY = []; // [term, definition, week]
+const CASES = {};    // Case Files, keyed "week-day" (cases-*.js)
+/* Case File helper. Each question: [question, correct, wrong, wrong, wrong, why, hint].
+   Questions 4 and 5 stand on their own (no names from the story) so the weekly quiz can use them. */
+function C(k, title, sections, qs){ CASES[k] = {title, sections, qs:qs.map(a=>({q:a[0],choices:a.slice(1,5),why:a[5],hint:a[6]}))}; }
 function addWeek(n, W){ WEEKS[n-1] = W; }

@@ -1,4 +1,23 @@
-COMPOUND 3.2 - LAUNCH CHECKLIST
+COMPOUND 3.4 - LAUNCH CHECKLIST
+
+WHAT CHANGED IN 3.4 (no typed math)
+  - No calculation problems anywhere. The math is shown, not asked: in the lesson's worked
+    examples, in the walkthroughs, in the Case File stories, and in the worked solution that
+    appears after each decision question.
+  - Each lesson day has up to 2 quick decision questions (pick an answer, e.g. "Which deal earns
+    more?"), then the Case File. Days with no decision questions go straight to the Case File.
+  - Weekly quiz and boss rounds use reading and decision questions only.
+  - To bring calculations back later, raise PRACTICE_CALC and QUIZ_CALC in core.js.
+
+
+WHAT CHANGED IN 3.3 (less math, more reading)
+  - Practice is now 3 problems a day instead of 10: up to 2 calculations and 1 concept question.
+  - New: a Case File every lesson day. A short real-life money story with 5 questions about
+    decisions and mistakes, no calculator needed. It counts toward the day's mastery score.
+  - Weekly quiz: 4 problems + 6 reading questions from that week's Case Files and Deep Dives.
+  - Videos, lessons and Deep Dives are unchanged. No database changes: just upload the files.
+  - If he was in the middle of a day's practice when you update, that day's practice restarts.
+  - To adjust the mix, change PRACTICE_CALC, PRACTICE_CONCEPT or QUIZ_CALC in core.js.
 
 1. SUPABASE (your SCHOOL project)
    a. Database > Extensions: search "pg_net" and turn it on. (Needed for help emails.)
@@ -50,6 +69,7 @@ FILES IN THIS FOLDER
   index.html, styles.css, app.js   the program
   core.js                          settings (videos on/off, goals, pass marks)
   content-1.js to content-6.js     all 25 weeks
+  cases-1.js to cases-5.js         the 75 Case Files (5 weeks per file)
   walk.js                          animated walkthroughs (days without a video)
   videos.js                        Khan Academy videos (Sal Khan only; some days have none)
   orientation.js                   the first-day welcome tour

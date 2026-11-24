@@ -23,10 +23,10 @@ function showStuckForm(){
     <textarea id="stuckMsg" rows="3" maxlength="600" placeholder="For example: I don't understand why we divide by 12."></textarea>
     <div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" id="stuckSend">Send to my teacher</button><button class="btn ghost small" id="stuckCancel">Cancel</button></div>`;
   const old=$("stuckBox"); if(old) old.remove();
-  $("lLeft").appendChild(box); $("stuckMsg").focus();
+  ($("qBox")||$("lLeft")).appendChild(box); $("stuckMsg").focus();
   $("stuckCancel").onclick=()=>box.remove();
   $("stuckSend").onclick=async()=>{
-    const q=L.qs[L.qi], h=qHelp(), where=`Week ${L.w}, day ${L.d}, practice question ${L.qi+1}`;
+    const q=L.qs[L.qi], h=qHelp(), where=`Week ${L.w}, day ${L.d}, ${q.kase?"Case File":"practice"} question ${L.qi+1}`;
     const msg=[`Question: ${plain(q.q)}`,
       q.choices?`Choices: ${q.choices.join(" | ")}`:"",
       `His answers so far: ${h.tries.length?h.tries.join(", "):"none yet"}`,
