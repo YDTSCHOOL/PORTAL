@@ -1,0 +1,2045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Encore</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎛️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Big+Shoulders+Display:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ebe7de; --panel:#fbf9f4; --panel2:#f1ede3; --line:#d8d1c1;
+  --text:#1f2230; --muted:#5d6276; --amber:#a76a08; --amber-ink:#fff8ea; --amber-soft:#f6e5c2;
+  --cyan:#1d7b8f; --good:#2c7a3c; --bad:#b3432f; --good-soft:#dff0e1; --bad-soft:#f8e2dc; --flame:#d9541e;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#161a26; --panel:#1f2434; --panel2:#283044; --line:#363e56;
+    --text:#ece7da; --muted:#9ca2b6; --amber:#f0b44c; --amber-ink:#1d1606; --amber-soft:#3a3120;
+    --cyan:#6cc7d9; --good:#86d394; --bad:#f08f7e; --good-soft:#1f3a2a; --bad-soft:#40251f; --flame:#ff8a4c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161a26; --panel:#1f2434; --panel2:#283044; --line:#363e56;
+  --text:#ece7da; --muted:#9ca2b6; --amber:#f0b44c; --amber-ink:#1d1606; --amber-soft:#3a3120;
+  --cyan:#6cc7d9; --good:#86d394; --bad:#f08f7e; --good-soft:#1f3a2a; --bad-soft:#40251f; --flame:#ff8a4c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.disp{font-family:"Big Shoulders Display","Barlow",Impact,sans-serif;font-weight:800;letter-spacing:.01em;line-height:1}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;font-size:.72em;line-height:1.08;text-align:center;margin:0 1px}
+.fr>span:first-child{border-bottom:1.5px solid currentColor;padding:0 2px}
+
+.top{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:12px 18px;max-width:1160px;margin:0 auto}
+.brand{margin-right:auto;display:flex;align-items:baseline;gap:12px}
+.brand b{font-size:32px}
+.brand span{color:var(--muted);font-size:15px}
+.stat{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 8px}
+.stat svg{flex:none}
+.stat strong{font-size:19px;font-weight:700}
+.stat .xp{display:flex;flex-direction:column;gap:3px;min-width:90px}
+.stat .xp small{font-size:12px;color:var(--muted);line-height:1}
+.bar{height:7px;border-radius:4px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--amber);border-radius:4px;transition:width .6s ease}
+.bar.good i{background:var(--good)}
+.menu{display:flex;gap:6px}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:6px 11px;font-size:14px;color:var(--muted)}
+.ghost:hover{color:var(--text);border-color:var(--muted)}
+main{max-width:1160px;margin:0 auto;padding:0 18px 60px}
+.btn{background:var(--amber);color:var(--amber-ink);border:0;border-radius:10px;padding:11px 20px;font-weight:700;font-size:17px}
+.btn:hover:not(:disabled){filter:brightness(1.06)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.big{font-size:20px;padding:14px 26px}
+.btn.line{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.line:hover{border-color:var(--amber)}
+.btn.good{background:var(--good);color:var(--panel)}
+
+/* stage */
+.stage{position:relative;border-radius:14px;overflow:hidden;background:#0f1220;line-height:0}
+.stage svg{width:100%;height:auto;display:block}
+.beam,.spotb{opacity:0;transition:opacity .8s ease}
+.idle .beam{opacity:.35}
+.show .beam,.show .spotb{opacity:1}
+.ledcell{opacity:.25}
+.show .ledcell,.idle .ledcell{opacity:.85}
+.show .crowd g{animation:bob .55s ease-in-out infinite alternate}
+.show .ledcell{animation:pulse 1.6s ease-in-out infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+@keyframes pulse{from{opacity:.35}to{opacity:1}}
+
+/* hub */
+.hero{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{margin:0 0 6px;font-size:30px}
+.card p{margin:0 0 8px}
+.muted{color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 12px}
+.seg button{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:8px 6px;text-align:center;line-height:1.2}
+.seg button b{display:block;font-size:15px}
+.seg button small{color:var(--muted);font-size:12.5px}
+.seg button[aria-pressed="true"]{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber);background:var(--amber-soft)}
+.missions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.mis{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;font-size:15px}
+.mis .ck{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:12px}
+.mis.done .ck{background:var(--good);border-color:var(--good);color:var(--panel)}
+.mis.done span{color:var(--muted);text-decoration:line-through}
+.mis small{color:var(--muted)}
+h3.sec{font-family:"Big Shoulders Display","Barlow",sans-serif;font-weight:800;font-size:28px;margin:32px 0 12px}
+.prog3{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);gap:12px}
+.bigl{display:flex;align-items:center;gap:16px}
+.bigl .ring{width:84px;height:84px;flex:none}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stats div{background:var(--panel2);border-radius:10px;padding:10px 12px}
+.stats b{display:block;font-size:24px}
+.stats small{color:var(--muted);font-size:13px}
+.chart svg{width:100%;height:auto;display:block}
+.skills{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.skill{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.skill.lock{opacity:.55}
+.skill .hd{display:flex;align-items:center;gap:10px}
+.skill .ic{width:44px;height:44px;border-radius:10px;background:var(--panel2);display:grid;place-items:center;flex:none}
+.skill b{font-size:17px;line-height:1.2}
+.skill small{color:var(--muted);font-size:13.5px}
+.stars{color:var(--amber);letter-spacing:2px;font-size:18px}
+.stars .off{color:var(--line)}
+.skill .acts{display:flex;gap:8px;margin-top:4px}
+.skill .acts .btn{font-size:14.5px;padding:8px 12px;flex:1}
+.trophies{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.tro{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tro b{font-size:14.5px;line-height:1.2}
+.tro small{color:var(--muted);font-size:12.5px;line-height:1.25}
+.tro.off{opacity:.42}
+.tro.off svg{filter:grayscale(1)}
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.item .ic{background:#141826;border-radius:8px;line-height:0}
+.item b{font-size:16px}
+.item small{color:var(--muted);font-size:13.5px;line-height:1.3;flex:1}
+.item .owned{color:var(--good);font-weight:600;font-size:14px}
+.item .btn{font-size:15px;padding:8px 12px}
+.item .boost{font-size:13px;color:var(--good);font-weight:600}
+
+/* challenge */
+.cbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.cbar .dots{display:flex;gap:6px;margin-right:auto}
+.cbar .dots i{width:26px;height:10px;border-radius:5px;background:var(--panel2)}
+.cbar .dots i.on{background:var(--amber)}
+.cbar .dots i.ok{background:var(--good)}
+.combo{display:flex;align-items:center;gap:6px;font-weight:700;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 8px}
+.combo.hot{border-color:var(--flame);color:var(--flame)}
+.chal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.scene{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px}
+.av{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:18px;background:var(--panel2);border:2px solid var(--line)}
+.av.dovid{background:var(--amber);color:var(--amber-ink);border-color:var(--amber)}
+.bubble{background:var(--panel);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:12px 14px;font-size:18px}
+.bubble b.who{display:block;font-size:13.5px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.vis{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;place-items:center;min-height:160px}
+.qcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.ask{font-size:24px;font-weight:600;line-height:1.3;margin:0 0 12px}
+.field{display:flex;align-items:center;border:2px solid var(--line);border-radius:12px;background:var(--bg);padding:0 14px;font-size:30px}
+.field:focus-within{border-color:var(--amber)}
+.field span{color:var(--muted)}
+.field input{border:0;background:transparent;width:100%;min-width:0;padding:10px 6px;font-size:30px;outline:none;font-variant-numeric:tabular-nums}
+.field.small{font-size:22px;padding:0 10px}
+.field.small input{font-size:22px;padding:6px 4px}
+.keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}
+.keypad button{border:1px solid var(--line);background:var(--panel2);border-radius:10px;padding:10px 0;font-size:22px;font-weight:600}
+.keypad button:active{transform:translateY(1px)}
+.keypad button.wide{font-size:15px}
+.checkrow{display:flex;gap:10px;margin-top:10px}
+.checkrow .btn{flex:1}
+.choices{display:flex;gap:10px;flex-wrap:wrap}
+.choices .btn{flex:1;min-width:120px}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.tools button{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:13.5px;font-weight:600;line-height:1.15}
+.tools button:disabled{opacity:.4;cursor:default}
+.tools button.help{border-color:var(--amber);background:var(--amber-soft)}
+.tools svg{width:24px;height:24px}
+.fb{margin-top:12px;border-radius:12px;padding:12px 14px;font-size:17px;display:none}
+.fb.on{display:block}
+.fb.good{background:var(--good-soft)}
+.fb.soft{background:var(--amber-soft)}
+.fb .acts{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.guide{margin-top:12px;border:2px solid var(--amber);border-radius:14px;padding:14px;background:var(--panel)}
+.guide .gh{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.guide .gh p{margin:0;font-size:15.5px}
+.gs{display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.gs .n{width:26px;height:26px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:13px;font-weight:700}
+.gs.done .n{background:var(--good);color:var(--panel)}
+.gs.cur .n{background:var(--amber);color:var(--amber-ink)}
+.gs .q{font-size:17px}
+.gs .a{font-weight:700;color:var(--good)}
+.gs .row{display:flex;gap:8px;margin-top:6px;align-items:center}
+.gs .row .field{flex:1}
+.gs .hint{margin-top:6px;font-size:15px;background:var(--amber-soft);border-radius:8px;padding:7px 10px}
+.gs.later{opacity:.45}
+
+/* visuals */
+.rcpt{background:#fffdf6;color:#2a2a26;font:15px/1.5 "Courier New",monospace;padding:14px 18px;min-width:240px;border-radius:4px;box-shadow:0 1px 0 rgba(0,0,0,.08)}
+.rcpt .rl{display:flex;justify-content:space-between;gap:16px}
+.rcpt .tot{border-top:1px dashed #999;margin-top:6px;padding-top:6px;font-weight:700}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.tile{width:74px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);display:flex;flex-direction:column;align-items:center;padding:6px 4px;gap:2px}
+.tile b{font-size:17px}
+.tile small{font-size:11.5px;color:var(--muted)}
+.tile.half{border-style:dashed}
+.splitv{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+.pile{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pile b{font-size:22px}
+.crew{display:flex;flex-wrap:wrap;gap:6px;max-width:300px;justify-content:center}
+.person{display:flex;flex-direction:column;align-items:center;font-size:13px;color:var(--muted);font-weight:600}
+.fbar{width:100%;max-width:440px}
+.fbar svg{width:100%;height:auto;display:block}
+.packs{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.pack{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel2);text-align:center;min-width:140px}
+.pack small{display:block;color:var(--muted);font-weight:600}
+.pack .cbl{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;max-width:150px;margin:6px auto}
+.pack b{font-size:18px}
+.ledger{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:440px}
+.ledger>div{border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.ledger .in{background:var(--good-soft)}
+.ledger .out{background:var(--bad-soft)}
+.ledger b{font-size:22px}
+.ledger span{font-size:13px;color:var(--muted)}
+.lens{display:flex;flex-direction:column;gap:12px;width:100%;max-width:440px}
+.lenrow{display:flex;align-items:center;gap:10px}
+.lenrow i{height:14px;border-radius:7px;background:repeating-linear-gradient(90deg,var(--amber) 0 18px,transparent 18px 20px)}
+.lenrow b{white-space:nowrap;font-size:18px}
+.vlabel{font-weight:700;font-size:18px;margin-bottom:8px;text-align:center}
+
+.rtab{border-collapse:collapse;font-size:20px;min-width:240px}
+.rtab th{font-size:14px;color:var(--muted);font-weight:600;padding:4px 18px;border-bottom:2px solid var(--line)}
+.rtab td{text-align:center;padding:8px 18px;font-weight:700;border-bottom:1px solid var(--line)}
+.rtab tr.q td{color:var(--amber)}
+.chain{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.chain>div{border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;align-items:center;background:var(--panel2)}
+.chain>div.pos{background:var(--good-soft)}.chain>div.neg{background:var(--bad-soft)}
+.chain span{font-size:13px;color:var(--muted)}.chain b{font-size:20px}.chain i{color:var(--muted);font-style:normal}
+.eqv{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;font-size:20px;font-weight:700}
+.eqv span{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.eqv span.tot{background:var(--amber-soft);border-color:var(--amber)}.eqv i{font-style:normal;color:var(--muted)}
+.raffle{display:grid;grid-template-columns:repeat(10,22px);gap:5px;justify-content:center}
+.raffle i{height:14px;border-radius:3px;background:var(--panel2);border:1px solid var(--line)}
+.raffle i.win{background:var(--amber);border-color:var(--amber)}
+.nights{display:flex;gap:14px;align-items:flex-end;justify-content:center;height:160px}
+.nights div{display:flex;flex-direction:column;align-items:center;gap:3px}
+.nights i{width:38px;border-radius:6px 6px 0 0;background:var(--amber)}
+.nights b{font-size:16px}.nights small{font-size:12px;color:var(--muted)}
+.vis svg{max-width:100%}
+/* floating rewards & banner */
+.float{position:fixed;font-weight:800;font-size:28px;color:var(--good);pointer-events:none;z-index:40;animation:floatup 1.3s ease-out forwards;text-shadow:0 1px 0 var(--panel)}
+@keyframes floatup{from{opacity:0;transform:translate(-50%,0) scale(.8)}15%{opacity:1;transform:translate(-50%,-10px) scale(1.1)}to{opacity:0;transform:translate(-50%,-80px) scale(1)}}
+.banner{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:45;pointer-events:none;display:none;text-align:center;background:var(--panel);border:2px solid var(--amber);border-radius:18px;padding:18px 30px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.banner.on{display:block;animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+.banner b{display:block;font-family:"Big Shoulders Display","Barlow",sans-serif;font-size:44px;font-weight:800;color:var(--amber);line-height:1}
+.banner span{font-size:18px;font-weight:600}
+@keyframes pop{from{transform:translateX(-50%) scale(.6);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+.flash{animation:flash .6s ease}
+@keyframes flash{0%{box-shadow:0 0 0 0 var(--good)}50%{box-shadow:0 0 0 6px var(--good)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* scratch pad */
+.pad{position:fixed;right:16px;bottom:16px;width:min(440px,calc(100vw - 32px));height:min(520px,70vh);background:var(--panel);border:2px solid var(--line);border-radius:16px;z-index:30;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.pad[hidden]{display:none}
+.pad .ph{display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.pad .ph b{margin-right:auto}
+.pad .ph button{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:5px 10px;font-size:14px}
+.pad .ph button[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-soft)}
+.pad .pq{padding:6px 12px;font-size:14px;color:var(--muted);border-bottom:1px solid var(--line)}
+.pad canvas{flex:1;width:100%;touch-action:none;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:28px 28px;border-radius:0 0 14px 14px;cursor:crosshair}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(8,10,18,.62);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal.on{display:flex}
+.sheet{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;max-width:620px;width:100%;max-height:94%;overflow:auto;padding:22px 24px}
+.sheet h2{font-size:38px;margin:4px 0 8px}
+.sheet p{margin:0 0 10px}
+.sheet .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.sheet label{font-size:14px;color:var(--muted)}
+.sheet input[type=text],.sheet textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:17px;margin-top:4px}
+.sheet textarea{height:84px;font:12px/1.3 ui-monospace,Menlo,monospace;resize:vertical}
+.sheet .stage{margin:-4px 0 14px}
+.pdots{display:flex;gap:6px;justify-content:center;margin-top:12px}
+.pdots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.pdots i.on{background:var(--amber)}
+.tut{display:flex;gap:16px;align-items:center}
+.tut .tic{flex:none;width:96px;height:96px;background:var(--amber-soft);border-radius:20px;display:grid;place-items:center}
+.tut .tic svg{width:54px;height:54px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.sum div{background:var(--panel2);border-radius:10px;padding:10px;text-align:center}
+.sum b{display:block;font-size:24px}
+.sum small{color:var(--muted);font-size:13px}
+.pay .l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.pay .l.tot{border:0;font-size:24px;font-weight:700;padding-top:10px}
+.notice{background:var(--amber-soft);border-radius:10px;padding:10px 12px;font-size:15.5px;margin-top:10px}
+/* video */
+.video{background:#0f1220;border-radius:14px;padding:18px;min-height:250px;display:grid;place-items:center;color:#ece7da;--panel:#1f2434;--panel2:#283044;--line:#3a4258;--muted:#a8aec0;--text:#ece7da;--good-soft:#1f3a2a;--bad-soft:#40251f;--amber:#f0b44c}
+.video .frame{width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;animation:vin .5s ease}
+@keyframes vin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.vcap{font-size:20px;line-height:1.4;margin:14px 0 6px;min-height:58px}
+.vprog{display:flex;gap:4px;margin:8px 0}
+.vprog i{flex:1;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.vprog i.on{background:var(--amber)}
+.vprog i.cur b{display:block;height:100%;background:var(--amber);width:0;animation:vfill linear forwards}
+@keyframes vfill{to{width:100%}}
+.vctl{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.show .crowd g,.show .ledcell,.float,.banner.on,.video .frame{animation:none}.beam,.spotb{transition:none}}
+
+
+/* ===== sign-in and teacher view ===== */
+body[data-mode="out"] .top, body[data-mode="out"] #view, body[data-mode="teacher"] .top, body[data-mode="teacher"] #view{display:none}
+body[data-mode="app"] .gate, body[data-mode="teacher"] .gate{display:none}
+.tview{display:none}
+body[data-mode="teacher"] .tview{display:block}
+.gate{min-height:100vh;display:grid;place-items:center;padding:20px 16px}
+.gwrap{width:min(560px,100%)}
+.gstage{margin-bottom:-28px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.gcard{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin:0 18px;box-shadow:0 10px 40px rgba(0,0,0,.18)}
+.gbrand{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}.gbrand b{font-size:44px}.gbrand span{color:var(--muted)}
+.frow{display:block;margin-top:12px}.frow span{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.frow input{width:100%;padding:11px 12px;border:2px solid var(--line);border-radius:10px;background:var(--bg);font-size:20px}
+.frow input:focus{border-color:var(--amber);outline:none}
+.err{color:var(--bad);min-height:22px;margin:8px 0 0;font-size:15px}
+.gacts{display:flex;align-items:center;gap:12px;margin-top:8px}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;padding:0;font-size:14px}
+.saving{font-size:13px;color:var(--muted);align-self:center;min-width:56px;text-align:right}
+.saving.bad{color:var(--bad);font-weight:600}
+.clockwarn{font-size:13px;color:var(--bad);font-weight:700;align-self:center}
+.tview{padding:18px}
+.twrap{max-width:1320px;margin:0 auto}
+.thead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.thead h2{font-size:34px;margin:0 auto 0 0}
+.tbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:15px}
+.tbar input[type=time]{padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.tgrid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr);gap:12px;align-items:start}
+@media (max-width:1050px){.tgrid{grid-template-columns:1fr}}
+.tcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto;max-height:78vh}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;color:var(--muted);font-weight:600;font-size:12.5px;padding:6px 8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.tbl td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td.n{text-align:right;white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:4px;max-width:300px}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 8px;white-space:nowrap;color:var(--muted)}
+.chip.cur{border-color:var(--amber);color:var(--text);font-weight:700}
+.chip.ok{border-color:var(--good);color:var(--good)}
+.chip.lock{opacity:.45}
+.small{font-size:12.5px;color:var(--muted)}
+.tlog td{font-size:13.5px}
+/* ===== long division house ===== */
+.ld{display:inline-grid;font:700 30px/1.25 "Barlow",system-ui,sans-serif;font-variant-numeric:tabular-nums;padding:6px 10px}
+.ldr{display:grid;grid-template-columns:auto repeat(var(--n),1.15ch);justify-items:center}
+.ldr>span{min-width:1.15ch;text-align:center}
+.ldr .q{color:var(--amber)}
+.ldr .new{color:var(--amber)}
+.ldd{padding-right:10px;color:var(--cyan);justify-self:end}
+.ldr .dv{position:relative;border-top:3px solid var(--text);padding:0 .08ch}
+.ldr .dv.first{border-left:3px solid var(--text);border-top-left-radius:10px;padding-left:4px}
+.ldr .dv.dot::after{content:".";position:absolute;right:-.35ch;bottom:0;color:var(--text)}
+.ldr .ul{border-bottom:2.5px solid var(--muted);color:var(--muted)}
+.ldr .mi{color:var(--muted);justify-self:end}
+.ldr .bd{color:var(--cyan)}
+.ldans{margin-top:8px;font-size:22px;text-align:center}.ldans span{color:var(--muted)}
+.pop{animation:popin .45s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes popin{from{opacity:0;transform:translateY(-8px) scale(.6)}}
+.share .grp{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:6px}
+.share .grp i{width:54px;height:54px;border-radius:14px;border:2px dashed var(--amber);display:grid;place-items:center;font-style:normal;font-weight:800;font-size:22px;color:var(--amber);animation:popin .5s both}
+.goal{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.goal p{margin:4px 0 6px}
+.gl{display:flex;gap:8px;align-items:center;font-size:15px;margin-top:6px}
+.gl span{width:24px;height:24px;border-radius:50%;background:var(--panel2);display:grid;place-items:center;font-size:13px;font-weight:700;flex:none}
+.gl.ok span{background:var(--good);color:var(--panel)}
+.gl.ok{color:var(--muted)}
+.skill small b{font-size:inherit;font-weight:700;line-height:inherit}
+.skill .tag{align-self:flex-start;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--amber-soft);color:var(--amber)}
+.skill .tag.ok{background:var(--good-soft);color:var(--good)}
+@media (prefers-reduced-motion:reduce){.pop,.share .grp i{animation:none}}
+/* ===== motion and graphics ===== */
+#fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:60}
+.beams .beam,.beams .spotb{transform-box:fill-box;transform-origin:50% 0}
+.idle .beams .beam{animation:sweep 9s ease-in-out infinite alternate}
+.show .beams .beam{animation:sweep 3.4s ease-in-out infinite alternate}
+.beams .beam:nth-child(2n){animation-direction:alternate-reverse}
+.beams .beam:nth-child(3n){animation-duration:7s}
+.show .beams{animation:hue 6s linear infinite}
+@keyframes sweep{from{transform:rotate(-11deg)}to{transform:rotate(11deg)}}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+.pool{opacity:0;transition:opacity .8s}
+.idle .pool{opacity:.25}.show .pool{opacity:.7;animation:poolp 1.7s ease-in-out infinite alternate}
+@keyframes poolp{from{opacity:.4}to{opacity:.8}}
+.flare{opacity:.0;transition:opacity .6s}
+.show .flare{opacity:1;animation:flare 1.1s ease-in-out infinite alternate}
+.idle .flare{opacity:.35}
+@keyframes flare{from{opacity:.55}to{opacity:1}}
+.haze ellipse{animation:drift 16s ease-in-out infinite alternate}
+.haze ellipse:nth-child(2){animation-duration:21s;animation-direction:alternate-reverse}
+@keyframes drift{from{transform:translateX(-40px)}to{transform:translateX(40px)}}
+.mote{animation:twinkle 3.2s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:.9}}
+.marq{animation:marq 9s linear infinite}
+@keyframes marq{from{transform:translateX(380px)}to{transform:translateX(-620px)}}
+.eqbar{transform-box:fill-box;transform-origin:50% 100%;animation:eq .45s ease-in-out infinite alternate}
+@keyframes eq{from{transform:scaleY(.15)}to{transform:scaleY(1)}}
+.stage.boot .beams,.stage.boot .pool{animation:rigon 1.6s ease both}
+.stage.boot .lamp{animation:lampon .25s steps(2) both}
+@keyframes rigon{0%{opacity:0}40%{opacity:0}100%{opacity:1}}
+@keyframes lampon{from{opacity:0}to{opacity:1}}
+.stat.bump{animation:bump .45s cubic-bezier(.2,1.6,.4,1)}
+.stat.bump strong{color:var(--good)}
+@keyframes bump{40%{transform:scale(1.14)}100%{transform:scale(1)}}
+.combo.bump{animation:bump .45s cubic-bezier(.2,1.6,.4,1)}
+.combo.hot svg{animation:flicker .35s ease-in-out infinite alternate;transform-origin:50% 90%}
+.combo.hot{box-shadow:0 0 0 0 var(--flame);animation:hotglow 1.4s ease-in-out infinite}
+@keyframes flicker{from{transform:scale(1) rotate(-4deg)}to{transform:scale(1.18) rotate(4deg)}}
+@keyframes hotglow{50%{box-shadow:0 0 14px 1px color-mix(in srgb,var(--flame) 45%,transparent)}}
+.bar i{position:relative;overflow:hidden}
+.bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:shine 2.8s ease-in-out infinite}
+@keyframes shine{60%,100%{transform:translateX(100%)}}
+.skill .bar i{animation:grow 1.1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes grow{from{width:0}}
+.ring .arc{animation:ringin 1.3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes ringin{from{stroke-dasharray:0 999}}
+.chart rect{transform-box:fill-box;transform-origin:50% 100%;animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes rise{from{transform:scaleY(0)}}
+.cbar .dots i.on{animation:dotpulse 1.2s ease-in-out infinite}
+@keyframes dotpulse{50%{filter:brightness(1.35);transform:scaleY(1.3)}}
+.chal.enter>div:first-child{animation:inl .5s cubic-bezier(.2,.8,.2,1) both}
+.chal.enter>div:last-child{animation:inr .5s .08s cubic-bezier(.2,.8,.2,1) both}
+@keyframes inl{from{opacity:0;transform:translateX(-24px)}}
+@keyframes inr{from{opacity:0;transform:translateX(24px)}}
+.field.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.qcard.win{animation:win .7s ease}
+@keyframes win{0%{box-shadow:0 0 0 0 var(--good)}40%{box-shadow:0 0 0 8px color-mix(in srgb,var(--good) 35%,transparent),0 0 40px color-mix(in srgb,var(--good) 30%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.item.got{animation:win .9s ease}
+.tro:not(.off){position:relative;overflow:hidden}
+.tro:not(.off) svg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--amber) 55%,transparent))}
+.tro:not(.off)::after{content:"";position:absolute;inset:-40%;background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.35) 50%,transparent 60%);transform:translateX(-100%);animation:glint 5s ease-in-out infinite}
+@keyframes glint{70%,100%{transform:translateX(100%)}}
+.banner.on b{animation:glow 1s ease-in-out infinite alternate}
+@keyframes glow{from{text-shadow:0 0 0 transparent}to{text-shadow:0 0 18px color-mix(in srgb,var(--amber) 70%,transparent)}}
+.video{background:radial-gradient(circle at var(--sx,30%) 20%,#2a3150 0,#0f1220 60%);animation:vspot 9s ease-in-out infinite alternate}
+@property --sx{syntax:'<percentage>';inherits:false;initial-value:30%}
+@keyframes vspot{from{--sx:20%}to{--sx:80%}}
+.ka{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.ka p{margin:0 0 8px}
+.ka a{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);text-decoration:none;font-weight:600;margin-top:6px}
+.ka a:hover{border-color:var(--amber)}
+.ka a svg{width:22px;height:22px;flex:none;color:var(--cyan)}
+.ka a small{margin-left:auto;color:var(--muted);font-weight:500}
+@media (prefers-reduced-motion:reduce){
+  .beams,.beams .beam,.pool,.flare,.haze ellipse,.mote,.marq,.eqbar,.stage.boot *,.stat.bump,.combo,.combo svg,.bar i,.bar i::after,.ring .arc,.chart rect,.cbar .dots i,.chal.enter>div,.field.shake,.qcard.win,.item.got,.tro::after,.banner.on b,.video{animation:none!important}
+}
+@media (max-width:880px){
+  .hero,.chal,.prog3{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .brand b{font-size:26px}
+  .ask{font-size:21px}
+  .tools{grid-template-columns:repeat(2,1fr)}
+  .tut{flex-direction:column}
+  .sum{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body data-mode="out">
+<header class="top">
+  <div class="brand"><b class="disp">Encore</b><span id="coName"></span></div>
+  <div class="stat" id="cashPill" title="Cash"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="var(--amber)"/><text x="11" y="15.5" text-anchor="middle" font-size="13" font-weight="700" fill="var(--amber-ink)" font-family="Barlow,sans-serif">$</text></svg><strong class="num" id="cash">$0</strong></div>
+  <div class="stat" title="Company level"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7L12 17.3 5.8 21l1.6-7L2 9.2l7.1-.6z" fill="var(--amber)"/></svg><div class="xp"><strong id="lvl" style="font-size:15px;line-height:1">Level 1</strong><div class="bar"><i id="xpbar" style="width:0"></i></div></div></div>
+  <div class="stat" title="Days in a row"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="var(--flame)"/></svg><strong id="days">0</strong></div>
+  <nav class="menu"><span class="saving" id="saving" aria-live="polite"></span><span class="clockwarn" id="clockWarn" hidden></span><button class="ghost" id="bHelp">How to play</button><button class="ghost" id="bOut">Sign out</button></nav>
+</header>
+<main id="view"></main>
+<section class="gate" id="gate">
+  <div class="gwrap">
+    <div class="gstage stage" id="gStage"></div>
+    <div class="gcard">
+      <div class="gbrand"><b class="disp">Encore</b><span>Build your sound and stage company</span></div>
+      <div id="signForm">
+        <p class="muted" style="margin:0 0 4px">Sign in with the same name and PIN as the school portal.</p>
+        <label class="frow"><span>First name</span><input id="inName" autocomplete="off" autocapitalize="words"></label>
+        <label class="frow"><span>PIN</span><input id="inPin" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+        <p class="err" id="inErr"></p>
+      </div>
+      <div id="closedBox" hidden><h3 class="disp" style="font-size:30px;margin:4px 0">Closed for now</h3><p class="muted" id="closedMsg"></p></div>
+      <div class="gacts"><button class="btn big" id="inGo">Sign in</button><span style="flex:1"></span><button class="link" id="teachLink">Teacher</button></div>
+    </div>
+  </div>
+</section>
+<section class="tview" id="tview"></section>
+
+<div class="pad" id="pad" hidden>
+  <div class="ph"><b>Scratch pad</b>
+    <button id="pPen" aria-pressed="true">Pen</button><button id="pErase" aria-pressed="false">Eraser</button><button id="pClear">Clear</button><button id="pClose" aria-label="Close scratch pad">Close</button></div>
+  <div class="pq" id="padQ"></div>
+  <canvas id="padC"></canvas>
+</div>
+<div class="modal" id="modal"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="banner" id="banner" role="status"></div>
+<script>
+/* ===== helpers ===== */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const rnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const r2 = n => Math.round(n*100)/100;
+const fmt = n => { n = r2(n); return Number.isInteger(n) ? n.toLocaleString('en-US') : n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+const money = n => (n < 0 ? '−$' : '$') + fmt(Math.abs(n));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const gcd = (a,b) => b ? gcd(b, a % b) : Math.abs(a);
+const cap = s => s[0].toUpperCase() + s.slice(1);
+function fr(n, d = 1){
+  if (d < 0){ n = -n; d = -d; }
+  const g = gcd(n, d) || 1; n /= g; d /= g;
+  const neg = n < 0; n = Math.abs(n);
+  const w = Math.floor(n / d), r = n % d;
+  const f = r ? `<span class="fr"><span>${r}</span><span>${d}</span></span>` : '';
+  return (neg ? '−' : '') + (w ? (r ? `${w}\u2009${f}` : `${w}`) : (r ? f : '0'));
+}
+const raw = (n, d) => `<span class="fr"><span>${n}</span><span>${d}</span></span>`;
+function parseNum(rawv){
+  let t = String(rawv).replace(/[$,%¢]/g,'').replace(/[−–]/g,'-').replace(/[a-z]/gi,'').trim();
+  if (!t) return NaN;
+  let neg = false; if (t[0] === '-'){ neg = true; t = t.slice(1).trim(); }
+  t = t.replace(/^(\d+)-(\d+\s*\/)/, '$1 $2');
+  let m, v;
+  if ((m = t.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/))) v = +m[1] + (+m[2])/(+m[3]);
+  else if ((m = t.match(/^(\d+)\s*\/\s*(\d+)$/))) v = (+m[1])/(+m[2]);
+  else if (/^(\d+\.?\d*|\.\d+)$/.test(t)) v = +t;
+  else return NaN;
+  return neg ? -v : v;
+}
+const todayStr = (d = new Date()) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+let S = null;
+/* ===== school server (SCHOOL Supabase project, same sign-in as the portal) ===== */
+const SUPABASE_URL = "https://belathxxgwayxdmiqvpd.supabase.co";   // SCHOOL project
+const SUPABASE_KEY = "sb_publishable_Kxuxi919RbsmEk-p8iNt-w_zm6BsRI9"; // public key, safe to keep here
+const IDLE_MINUTES = 20;          // signs out after this long with no activity
+const CLOSE_WARN_MINUTES = 5;     // warning before the daily lock closes (lock is set in the Teacher view)
+async function rpc(fn, args, keep){
+  const h = {'Content-Type':'application/json', 'apikey':SUPABASE_KEY};
+  if (SUPABASE_KEY.startsWith('eyJ')) h.Authorization = 'Bearer ' + SUPABASE_KEY;
+  const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {method:'POST', headers:h, body:JSON.stringify(args || {}), keepalive:!!keep});
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+let TOKEN = null, NAME = '', DEMO = /[?&]demo\b/.test(location.search), dirty = false, pendingEv = [], saveT = null, saveChain = Promise.resolve(), lastAct = Date.now();
+const TIER_WORD = how => how === 'solo1' ? 'on his own, first try' : how === 'solo2' ? 'on his own, second try' : 'with Dovid’s help';
+function report(kind, d){
+  const ev = {
+    solve: () => ['solve', `${SK(d.skill).name}, level ${d.tier}: ${TIER_WORD(d.how)}`],
+    shift: () => ['shift', `Finished a shift (${d.event}): ${d.solo} on his own, ${d.team} with Dovid, best combo ${d.best}, earned $${Math.round(d.earned)}`],
+    buy: () => ['gear', `Bought ${d.item} for $${d.price}`],
+    khan: () => ['khan', `Opened Khan Academy video "${d.video}" (${SK(d.skill).name})`],
+    lesson: () => ['lesson', `Watched Dovid’s lesson: ${SK(d.skill).name}`],
+    unlock: () => ['unlock', `Showed he understands ${SK(d.after).name}. Unlocked ${SK(d.skill).name}`],
+    start: () => ['company', d.again ? `Started over with a new company, "${d.name}"` : `Named his company "${d.name}"`]
+  }[kind];
+  if (ev){ const [e, t] = ev(); pendingEv.push({e, d:t}); }
+}
+function setSaving(t, bad){ const el = $('#saving'); if (!el) return; el.textContent = t; el.className = 'saving' + (bad ? ' bad' : ''); }
+function save(){ dirty = true; if (DEMO || !TOKEN || !S) return; clearTimeout(saveT); saveT = setTimeout(flush, 700); }
+function flush(keep){
+  clearTimeout(saveT);
+  if (DEMO || !TOKEN || !S) return Promise.resolve();
+  dirty = false; const ev = pendingEv.splice(0, 50), body = {p_token:TOKEN, p_state:S, p_events:ev};
+  setSaving('Saving…');
+  saveChain = saveChain.then(() => rpc('stage_save', body, keep)).then(r => {
+    if (r && r.ok) setSaving(pendingEv.length || dirty ? 'Saving…' : 'Saved');
+    else {
+      pendingEv.unshift(...ev); dirty = true;
+      if (r && r.error === 'session'){ setSaving('Signed out', true); toast('Your session ended. Please sign in again.'); setTimeout(() => signOut(true), 1500); }
+      else setSaving('Not saved yet', true);
+    }
+  }).catch(() => { pendingEv.unshift(...ev); dirty = true; setSaving('Not saved yet, retrying', true); });
+  return saveChain;
+}
+setInterval(() => { if (dirty && TOKEN && !DEMO) flush(); }, 20000);
+// time on task: 15 seconds at a time while he's active and the page is visible
+setInterval(() => {
+  if (!S || document.body.dataset.mode !== 'app' || !(TOKEN || DEMO)) return;
+  if (Date.now() - lastAct < 60000 && document.visibilityState === 'visible'){ const A = dayAct(); A.m += 15; dirty = true; }
+}, 15000);
+function dayAct(){ S.act = S.act || {}; const k = todayStr(); return S.act[k] = S.act[k] || {m:0, n:0, t:0}; }
+
+/* ----- daily lock (off unless turned on in the Teacher view) ----- */
+let LOCK = {on:false, close:'15:10', open:'16:15'}, clockOffset = 0;
+const tmin = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
+const nowMin = () => { const d = new Date(); return (((d.getHours()*60 + d.getMinutes() + clockOffset) % 1440) + 1440) % 1440; };
+const fmtT12 = t => { const [h,m] = t.split(':').map(Number); return ((h+11)%12+1) + ':' + String(m).padStart(2,'0') + (h < 12 ? ' AM' : ' PM'); };
+function isClosed(){ if (!LOCK.on) return false; const c = tmin(LOCK.close), o = tmin(LOCK.open), n = nowMin(); if (c < o) return n >= c && n < o; if (c > o) return n >= c || n < o; return false; }
+function minsToClose(){ if (!LOCK.on || isClosed()) return null; return (tmin(LOCK.close) - nowMin() + 1440) % 1440; }
+async function fetchLock(){
+  try{ const r = await rpc('stage_get_settings', {});
+    if (r && r.ok){ LOCK = {on:!!r.lock_on, close:r.close_time, open:r.open_time};
+      if (typeof r.now_min === 'number'){ const d = new Date(); let off = r.now_min - (d.getHours()*60 + d.getMinutes()); if (off > 720) off -= 1440; if (off < -720) off += 1440; clockOffset = Math.abs(off) <= 1 ? 0 : off; } }
+  }catch(e){}
+  checkClock();
+}
+function setClosedView(){ const c = isClosed(); $('#signForm').hidden = c; $('#closedBox').hidden = !c; $('#inGo').hidden = c; if (c) $('#closedMsg').textContent = `Your company is saved. Encore opens again at ${fmtT12(LOCK.open)}.`; }
+function checkClock(){
+  const inApp = !!(TOKEN && S), left = minsToClose();
+  const w = $('#clockWarn');
+  if (inApp && left !== null && left > 0 && left <= CLOSE_WARN_MINUTES){ w.hidden = false; w.textContent = `Closing in ${left} min. Your work is saved.`; } else w.hidden = true;
+  if (isClosed() && inApp){ pendingEv.push({e:'closed', d:`Signed out automatically at ${fmtT12(LOCK.close)}`}); signOut(true); }
+  else if (document.body.dataset.mode === 'out') setClosedView();
+}
+setInterval(checkClock, 10000); setInterval(fetchLock, 60000);
+
+/* ----- sign in / out ----- */
+function showGate(){ document.body.dataset.mode = 'out'; $('#tview').innerHTML = ''; $('#gStage').innerHTML = stageSVG({gear:{lights:true, spot:true, fog:true}, crowd:0, mode:'idle'}); closeModal(); closePad(); setClosedView(); if (!isClosed()) setTimeout(() => $('#inName').focus(), 50); }
+async function signIn(){
+  if (isClosed()) return setClosedView();
+  const n = $('#inName').value.trim(), p = $('#inPin').value.trim(); $('#inErr').textContent = '';
+  if (!n || !p){ $('#inErr').textContent = 'Type your first name and PIN.'; return; }
+  $('#inGo').disabled = true; $('#inGo').textContent = 'Signing in…';
+  try{
+    const r = await rpc('stage_login', {p_name:n, p_pin:p});
+    if (r.ok){ TOKEN = r.token; NAME = r.name; $('#inPin').value = ''; poke(); startGame(r.state); }
+    else if (r.error === 'closed'){ await fetchLock(); LOCK.on = true; setClosedView(); }
+    else $('#inErr').textContent = {name:'That name isn’t on the school list. Check the spelling.', pin:'That PIN doesn’t match. Try again.', locked:'Too many wrong PINs. Wait 5 minutes, then try again.'}[r.error] || 'Sign-in didn’t work. Ask your teacher.';
+  }catch(e){ $('#inErr').textContent = 'Can’t reach the school server. Check the Wi-Fi and try again.'; }
+  $('#inGo').disabled = false; $('#inGo').textContent = 'Sign in';
+}
+async function signOut(quiet){
+  const tok = TOKEN;
+  if (tok && !DEMO){ try{ await flush(); await rpc('stage_signout', {p_token:tok}, true); }catch(e){} }
+  TOKEN = null; NAME = ''; S = null; dirty = false; pendingEv = []; setSaving('');
+  if (S === null && vid) vStop();
+  if (DEMO){ DEMO = false; history.replaceState(null, '', location.pathname); }
+  $('#inName').value = ''; showGate();
+}
+let idleT;
+function poke(){ lastAct = Date.now(); clearTimeout(idleT); if (TOKEN) idleT = setTimeout(() => { pendingEv.push({e:'idle', d:`Signed out after ${IDLE_MINUTES} minutes without activity`}); signOut(true).then(() => $('#inErr').textContent = `You were signed out after ${IDLE_MINUTES} minutes without activity. Your work is saved.`); }, IDLE_MINUTES*60000); }
+['click','keydown','pointermove'].forEach(ev => document.addEventListener(ev, poke, {passive:true}));
+window.addEventListener('pagehide', () => { if (TOKEN && !DEMO && S){ try{ rpc('stage_save', {p_token:TOKEN, p_state:S, p_events:pendingEv.splice(0,50)}, true); rpc('stage_signout', {p_token:TOKEN}, true); }catch(e){} } });
+
+
+/* ===== names ===== */
+const FAMILIES = ['Levine','Gold','Friedman','Katz','Weiss','Adler','Stern','Rosen','Klein','Berger','Schwartz','Feld'];
+const SHULS = ['Ohr Chaim','Agudas Achim','Bnei Yisroel','Tiferes Moshe','Ahavas Torah'];
+const SCHOOLS = ['Cheder Ohr Yisroel','Yeshiva Toras Chaim','Mesivta Bnei Torah'];
+const BANDS = ['Kol Rina Orchestra','The Niggun Collective','Simcha Brass','Neshama Band'];
+function makeEvent(){
+  const f = pick(FAMILIES), L = S.level;
+  const evs = [
+    {t:`The ${f} bar mitzvah party`, c:`Mr. ${f}`},
+    {t:`The ${f} Chanukah party`, c:`Mr. ${f}`},
+    {t:`The ${f} siyum`, c:`Mr. ${f}`},
+    {t:`${pick(SHULS)} melava malka`, c:'The gabbai'}];
+  if (L >= 4) evs.push({t:`${pick(SCHOOLS)} concert`, c:'The menahel'});
+  if (L >= 7) evs.push({t:`The ${f} chasunah`, c:`Mr. ${f}`});
+  if (L >= 10) evs.push({t:`${pick(BANDS)} concert`, c:'The band’s manager'});
+  return pick(evs);
+}
+
+/* ===== little pictures ===== */
+const ICO = {
+  receipt:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 7h6M9 11h6M9 15h4" stroke="currentColor" stroke-width="2"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+  crew:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="currentColor"/><circle cx="16" cy="8" r="3" fill="currentColor"/><path d="M2 20c0-4 3-6 6-6s6 2 6 6M10 20c0-4 3-6 6-6s6 2 6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  cable:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18c4 0 4-12 9-12s5 12 9 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M8 12h2M14 12h2" stroke="currentColor" stroke-width="2"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12V4h8l10 10-8 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7.5" cy="8" r="1.6" fill="currentColor"/></svg>',
+  pct:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19L19 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="7" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+  ruler:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="8" width="20" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 8v4M10 8v3M14 8v4M18 8v3" stroke="currentColor" stroke-width="2"/></svg>',
+  chart:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18" stroke="currentColor" stroke-width="2"/><rect x="5" y="11" width="3" height="7" fill="currentColor"/><rect x="10.5" y="7" width="3" height="11" fill="currentColor"/><rect x="16" y="13" width="3" height="5" fill="currentColor"/></svg>',
+  help:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V6a2 2 0 0 1 4 0v4M11 10V5a2 2 0 0 1 4 0v5M15 10V7a2 2 0 0 1 4 0v7a7 7 0 0 1-7 7c-3 0-4-1-6-4l-3-5a2 2 0 0 1 3-2l2 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+  play:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9v6l5-3z" fill="currentColor"/></svg>',
+  pencil:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-5L16 4l4 4L9 19z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M13 7l4 4" stroke="currentColor" stroke-width="2"/></svg>',
+  speak:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  trophy:'<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><path d="M12 6h16v8a8 8 0 0 1-16 0z" fill="var(--amber)"/><path d="M12 9H6c0 5 3 7 6 7M28 9h6c0 5-3 7-6 7" fill="none" stroke="var(--amber)" stroke-width="2.5"/><rect x="18" y="21" width="4" height="7" fill="var(--amber)"/><rect x="12" y="28" width="16" height="5" rx="1.5" fill="var(--amber)"/></svg>'
+};
+const clockMini = '<svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="M12 7v5l3 2" stroke="var(--muted)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+const personMini = '<svg width="34" height="40" viewBox="0 0 34 40" aria-hidden="true"><circle cx="17" cy="11" r="8" fill="var(--muted)"/><path d="M3 38c0-9 6-14 14-14s14 5 14 14z" fill="var(--muted)"/></svg>';
+const cableMini = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18c4 0 4-12 9-12s5 12 9 12" fill="none" stroke="var(--amber)" stroke-width="3" stroke-linecap="round"/></svg>';
+const billsMini = '<svg width="86" height="58" viewBox="0 0 86 58" aria-hidden="true"><rect x="10" y="18" width="66" height="34" rx="4" fill="#2c7a3c" opacity=".55"/><rect x="6" y="12" width="66" height="34" rx="4" fill="#2c7a3c" opacity=".75"/><rect x="2" y="6" width="66" height="34" rx="4" fill="#3c9a4e"/><circle cx="35" cy="23" r="9" fill="none" stroke="#dff0e1" stroke-width="2"/><text x="35" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#dff0e1" font-family="Barlow,sans-serif">$</text></svg>';
+
+const visReceipt = (items, tot = '?') => `<div class="rcpt">${items.map(([l,a]) => `<div class="rl"><span>${esc(l)}</span><span>${money(a)}</span></div>`).join('')}<div class="rl tot"><span>${tot === '?' ? 'Total' : 'Total'}</span><span>${tot}</span></div></div>`;
+const visClocks = (h, rate, half) => `<div><div class="vlabel">${half ? `${h}${fr(1,2)}` : h} hours at $${rate} an hour</div><div class="tiles">${Array.from({length:h}, () => `<div class="tile">${clockMini}<b>$${rate}</b><small>1 hour</small></div>`).join('')}${half ? `<div class="tile half">${clockMini}<b>?</b><small>${fr(1,2)} hour</small></div>` : ''}</div></div>`;
+const visSplit = (T, n) => `<div class="splitv"><div class="pile">${billsMini}<b>$${fmt(T)}</b></div><div style="font-size:28px;color:var(--muted)">→</div><div class="crew">${Array.from({length:n}, () => `<div class="person">${personMini}$?</div>`).join('')}</div></div>`;
+function visBar(den, shade, label){
+  const w = 400, h = 64, pw = w/den;
+  let s = `<div class="fbar"><div class="vlabel">${label}</div><svg viewBox="0 0 ${w} ${h+20}" aria-hidden="true">`;
+  for (let i = 0; i < den; i++) s += `<rect x="${i*pw+1.5}" y="2" width="${pw-3}" height="${h}" rx="6" fill="${i < shade ? 'var(--amber)' : 'var(--panel2)'}" stroke="var(--line)" stroke-width="2"/>`;
+  s += `<text x="${w/2}" y="${h+18}" text-anchor="middle" font-size="14" fill="var(--muted)" font-family="Barlow,sans-serif">${den} equal pieces${shade ? `, ${shade} colored` : ''}</text></svg></div>`;
+  return s;
+}
+function visTen(p, label){
+  const w = 400, bw = 40; let s = `<div class="fbar"><div class="vlabel">${label}</div><svg viewBox="0 0 ${w} 86" aria-hidden="true">`;
+  for (let i = 0; i < 10; i++){
+    const fill = Math.max(0, Math.min(1, p/10 - i));
+    s += `<rect x="${i*bw+1.5}" y="2" width="${bw-3}" height="56" rx="5" fill="var(--panel2)" stroke="var(--line)" stroke-width="2"/>`;
+    if (fill > 0) s += `<rect x="${i*bw+1.5}" y="2" width="${(bw-3)*fill}" height="56" rx="5" fill="var(--amber)"/>`;
+    s += `<text x="${i*bw+bw/2}" y="78" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="Barlow,sans-serif">10%</text>`;
+  }
+  return s + `</svg></div>`;
+}
+const visPacks = packs => `<div class="packs">${packs.map(([n,price,lab]) => `<div class="pack">${lab ? `<small>${lab}</small>` : ''}<div class="cbl">${cableMini.repeat(n)}</div><b>${n} for ${money(price)}</b></div>`).join('')}</div>`;
+const visLedger = (inn, outs) => `<div class="ledger"><div class="in"><span>Money in</span><b>+${money(inn)}</b></div><div class="out"><span>Money out</span>${outs.map(o => `<b>−${money(o[1])}</b><span>${esc(o[0])}</span>`).join('')}</div></div>`;
+const visLengths = (list, unit = 'feet') => { const mx = Math.max(...list.map(l => l[0])); return `<div class="lens">${list.map(([v,lab,name]) => `<div><small class="muted">${name}</small><div class="lenrow"><i style="width:${Math.max(8, v/mx*70)}%"></i><b>${lab} ${unit}</b></div></div>`).join('')}</div>`; };
+
+/* ===== hand-holder steps ===== */
+const D = (q, ans, o = {}) => Object.assign({q, ans}, o);
+function addGuide(a, b){
+  const at = a - a%10, bt = b - b%10, ao = a%10, bo = b%10, s = [];
+  s.push(D(`Add the tens first: $${at} + $${bt}`, at+bt, {pre:'$', hint:`Think ${at/10} + ${bt/10} = ${at/10+bt/10}, then put a zero on the end.`}));
+  if (ao + bo) s.push(D(`Now add the ones: $${ao} + $${bo}`, ao+bo, {pre:'$'}));
+  if (ao + bo) s.push(D(`Put them together: $${at+bt} + $${ao+bo}`, a+b, {pre:'$'}));
+  return s;
+}
+function mulGuide(h, rate){
+  if (rate % 10 === 0) return [D(`Leave off the zero for now: ${h} × ${rate/10}`, h*rate/10, {hint:`Count by ${rate/10}s, ${h} times.`}), D(`Now put the zero back on: ${h} × $${rate}`, h*rate, {pre:'$'})];
+  const t = rate - rate%10, o = rate%10;
+  return [D(`Split $${rate} into $${t} and $${o}. First: ${h} × $${t}`, h*t, {pre:'$', hint:`${h} × ${t/10} = ${h*t/10}, then add a zero.`}), D(`Next: ${h} × $${o}`, h*o, {pre:'$'}), D(`Add them: $${h*t} + $${h*o}`, h*rate, {pre:'$'})];
+}
+const timesRow = (n, upto = 10) => Array.from({length:upto}, (_,i) => `${n} × ${i+1} = ${n*(i+1)}`).join(', ');
+function divGuide(T, n, q){
+  if (q <= 10) return [D(`What number times ${n} makes ${T}?  ${n} × ? = ${T}`, q, {pre:'$', hint:`Count by ${n}s: ${timesRow(n)}.`})];
+  if (q % 10 === 0) return [D(`$${T} is ${T/10} tens. Share ${T/10} tens between ${n}: ${T/10} ÷ ${n}`, q/10, {post:'tens', hint:`${n} × ? = ${T/10}`}), D(`So each person gets ${q/10} tens. That’s`, q, {pre:'$'})];
+  const c = q - q%10, left = T - n*c;
+  return [D(`Hand each of the ${n} people $${c} first. How much is that in all? ${n} × $${c}`, n*c, {pre:'$', hint:`${n} × ${c/10} = ${n*c/10}, then add a zero.`}),
+    D(`How much is left? $${T} − $${n*c}`, left, {pre:'$'}),
+    D(`Share what’s left: $${left} ÷ ${n}`, q-c, {pre:'$', hint:`Count by ${n}s: ${timesRow(n)}.`}),
+    D(`Each person gets $${c} + $${q-c}`, q, {pre:'$'})];
+}
+function pctGuide(T, p){
+  const ten = T/10;
+  if (p === 10) return [D(`10% means 1 out of 10 equal parts: $${T} ÷ 10`, ten, {pre:'$', hint:'Dividing by 10: just take off the last zero.'})];
+  if (p === 50) return [D(`50% is half: $${T} ÷ 2`, T/2, {pre:'$'})];
+  if (p === 25) return [D(`25% is a quarter. First find half: $${T} ÷ 2`, T/2, {pre:'$'}), D(`Now half of that: $${T/2} ÷ 2`, T/4, {pre:'$'})];
+  const s = [D(`First find 10%: $${T} ÷ 10`, ten, {pre:'$', hint:'Take off the last zero.'})];
+  if (p % 10 === 0) s.push(D(`${p}% is ${p/10} groups of 10%: ${p/10} × $${fmt(ten)}`, ten*p/10, {pre:'$'}));
+  else {
+    s.push(D(`5% is half of 10%: half of $${fmt(ten)}`, ten/2, {pre:'$'}));
+    const k = (p-5)/10;
+    if (k > 1) s.push(D(`${p-5}% is ${k} groups of 10%: ${k} × $${fmt(ten)}`, ten*k, {pre:'$'}));
+    if (k >= 1) s.push(D(`${p}% = ${p-5}% + 5%: $${fmt(ten*k)} + $${fmt(ten/2)}`, T*p/100, {pre:'$'}));
+  }
+  return s;
+}
+function subGuide(a, b){
+  const bh = b - b%100, bt = b%100, s = [];
+  if (bh && bt) return [D(`Take away the hundreds first: $${a} − $${bh}`, a-bh, {pre:'$'}), D(`Now take away the rest: $${a-bh} − $${bt}`, a-b, {pre:'$'})];
+  return [D(`$${a} − $${b}`, a-b, {pre:'$', hint: bh ? `Think in hundreds: ${a/100} − ${b/100}.` : `Count up from $${b} to $${a}.`})];
+}
+
+/* ===== the skills and their challenges (7th grade) ===== */
+const SKILLS = [
+  {id:'div',  name:'Split it up', math:'Division and long division', found:true, icon:'crew'},
+  {id:'frb',  name:'Fair shares', math:'Fraction basics', found:true, icon:'cable'},
+  {id:'dec',  name:'Count the cash', math:'Decimals and money', found:true, icon:'receipt'},
+  {id:'rate', name:'Find the rate', math:'Unit rates and speed', unlock:1, icon:'tag'},
+  {id:'prop', name:'Scale it up', math:'Proportions', unlock:1, icon:'crew'},
+  {id:'int',  name:'Gains and losses', math:'Negative numbers', unlock:2, icon:'chart'},
+  {id:'pct',  name:'Tax, deals and growth', math:'Percents', unlock:3, icon:'pct'},
+  {id:'frac', name:'Cut and measure', math:'Multiplying and dividing fractions', unlock:4, icon:'cable'},
+  {id:'eq',   name:'Solve for it', math:'Equations and inequalities', unlock:6, icon:'receipt'},
+  {id:'geo',  name:'Plan the stage', math:'Scale, area and circles', unlock:8, icon:'ruler'},
+  {id:'prob', name:'Odds and averages', math:'Probability and mean', unlock:10, icon:'clock'}
+];
+const SK = id => SKILLS.find(s => s.id === id);
+/* ===== long division: steps and the animated "house" ===== */
+function ldStages(N, d){
+  const g = String(N).split('').map(Number), st = [];
+  let i = 0, cur = g[0];
+  while (cur < d && i < g.length - 1){ i++; cur = cur*10 + g[i]; }
+  for (;;){
+    const q = Math.floor(cur/d), prod = q*d, rem = cur - prod;
+    st.push({pos:i, cur, q, prod, rem, next: i < g.length-1 ? g[i+1] : null});
+    if (i >= g.length - 1) break;
+    i++; cur = rem*10 + g[i];
+  }
+  return st;
+}
+// k = how many guide steps are done (2 per stage: the digit on top, then the subtraction)
+function visLong(N, d, k = 0, opts = {}){
+  const g = String(N).split(''), n = g.length, st = ldStages(N, d), done = k >= st.length*2;
+  const cell = (t, cls = '') => `<span class="${cls}">${t}</span>`;
+  const rows = [];
+  // quotient row
+  const qrow = Array(n).fill('');
+  st.forEach((x, j) => { if (k >= 2*j+1) qrow[x.pos] = cell(x.q, k === 2*j+1 ? 'pop new' : 'q'); });
+  rows.push(`<div class="ldr">${cell('')}${qrow.map(c => c || cell('')).join('')}</div>`);
+  rows.push(`<div class="ldr"><span class="ldd">${d}</span>${g.map((c, j) => cell(c, 'dv' + (j === 0 ? ' first' : '') + (opts.dot === j ? ' dot' : ''))).join('')}</div>`);
+  st.forEach((x, j) => {
+    if (k < 2*j+1) return;
+    const ps = String(x.prod), start = x.pos - ps.length + 1, row = Array(n).fill(cell(''));
+    ps.split('').forEach((c, m) => row[start+m] = cell(c, 'ul' + (k === 2*j+1 ? ' pop' : '')));
+    if (start - 1 >= 0) row[start-1] = cell('−', 'mi'); 
+    rows.push(`<div class="ldr">${cell(start - 1 < 0 ? '−' : '', 'mi')}${row.join('')}</div>`);
+    if (k < 2*j+2) return;
+    const rs = String(x.rem), rrow = Array(n).fill(cell(''));
+    rs.split('').forEach((c, m) => rrow[x.pos - rs.length + 1 + m] = cell(c, k === 2*j+2 ? 'pop' : ''));
+    if (x.next !== null && j < st.length-1) rrow[x.pos+1] = cell(x.next, 'bd' + (k === 2*j+2 ? ' pop' : ''));
+    rows.push(`<div class="ldr">${cell('')}${rrow.join('')}</div>`);
+  });
+  const last = st[st.length-1];
+  const tail = done ? `<div class="ldans pop">${N} ÷ ${d} = <b>${Math.floor(N/d)}</b>${last.rem ? ` <span>R ${last.rem}</span>` : ''}</div>` : '';
+  return `<div class="ld" style="--n:${n}">${rows.join('')}</div>${tail}`;
+}
+const visShare = (total, groups, what) => `<div class="share"><div class="vlabel">${fmt(total)} ${what} into ${groups} equal groups</div><div class="grp">${Array.from({length:Math.min(groups,12)}, (_,i) => `<i style="animation-delay:${(i*.07).toFixed(2)}s">?</i>`).join('')}</div></div>`;
+const ldGuide = (N, d, intro) => ldStages(N, d).flatMap((x, j, all) => [
+  D(`${j === 0 ? (intro ? intro + ' ' : '') + `Start with ${x.cur}.` : `Bring down the ${String(N)[x.pos]} to make ${x.cur}.`} How many ${d}s fit into ${x.cur}?`, x.q, {hint:`${timesRow(d, 9)}. Pick the biggest one that isn’t more than ${x.cur}.`, ld:true}),
+  D(`${x.q} × ${d} = ${x.prod}. Subtract: ${x.cur} − ${x.prod} = ?`, x.rem, {hint:`Count up from ${x.prod} to ${x.cur}.`, ld:true})
+]);
+
+const mixed = (v, d = 4) => fr(Math.round(v*d), d);
+const evName = ev => 'the ' + ev.t.replace(/^The /,'');
+
+/* pictures for 7th-grade challenges */
+const big = (t, size = 26) => `<div class="vlabel" style="font-size:${size}px;line-height:1.5">${t}</div>`;
+const visRatio = (head, known, ask) => `<table class="rtab"><tr><th>${head[0]}</th><th>${head[1]}</th></tr><tr><td>${known[0]}</td><td>${known[1]}</td></tr><tr class="q"><td>${ask[0]}</td><td>${ask[1]}</td></tr></table>`;
+const visRoad = (miles, hrs) => `<div style="text-align:center"><div style="width:170px;margin:0 auto 8px;background:#141826;border-radius:10px;line-height:0">${gearIcon('van')}</div>${big(`${fmt(miles)} miles in ${hrs} hours`, 22)}</div>`;
+const visChain = steps => `<div class="chain">${steps.map(([l,v]) => `<div class="${v < 0 ? 'neg' : 'pos'}"><span>${l}</span><b>${v < 0 ? '−' : '+'}$${fmt(Math.abs(v))}</b></div>`).join('<i>→</i>')}<div class="q"><span>Balance</span><b>?</b></div></div>`;
+function visTherm(hi, lo){
+  const top = 20, bot = -20, y = v => 14 + (top - v)/(top - bot)*180;
+  return `<svg viewBox="0 0 200 210" width="200" aria-hidden="true"><rect x="86" y="10" width="28" height="190" rx="14" fill="var(--panel2)" stroke="var(--line)" stroke-width="2"/>
+    ${[20,10,0,-10,-20].map(v => `<path d="M80 ${y(v)}h40" stroke="var(--line)" stroke-width="${v===0?3:1.5}"/><text x="72" y="${y(v)+5}" text-anchor="end" font-size="13" fill="var(--muted)" font-family="Barlow,sans-serif">${v}°</text>`).join('')}
+    <circle cx="100" cy="${y(hi)}" r="8" fill="var(--amber)"/><text x="128" y="${y(hi)+5}" font-size="14" fill="var(--text)" font-family="Barlow,sans-serif" font-weight="700">${hi}°</text>
+    <circle cx="100" cy="${y(lo)}" r="8" fill="var(--cyan)"/><text x="128" y="${y(lo)+5}" font-size="14" fill="var(--text)" font-family="Barlow,sans-serif" font-weight="700">${lo}°</text></svg>`;
+}
+const visEq = (parts, total) => `<div class="eqv">${parts.map(p => `<span>${p}</span>`).join('<i>+</i>')}<i>=</i><span class="tot">${total}</span></div>`;
+function visRect(w, h, lw, lh, note){
+  const W = 300, Hh = Math.max(60, Math.min(180, W*h/w));
+  return `<div style="text-align:center"><svg viewBox="0 0 360 ${Hh+60}" width="100%" style="max-width:380px" aria-hidden="true"><rect x="30" y="20" width="${W}" height="${Hh}" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="3" rx="4"/>
+    <text x="${30+W/2}" y="14" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="Barlow,sans-serif">${lw}</text>
+    <text x="${W+38}" y="${20+Hh/2}" font-size="15" font-weight="700" fill="var(--text)" font-family="Barlow,sans-serif">${lh}</text>
+    <text x="${30+W/2}" y="${Hh+48}" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="Barlow,sans-serif">${note}</text></svg></div>`;
+}
+const visCircle = (label, mode) => `<svg viewBox="0 0 220 200" width="220" aria-hidden="true"><circle cx="110" cy="96" r="78" fill="var(--amber-soft)" stroke="var(--amber)" stroke-width="${mode==='edge'?6:3}"/>
+  ${mode==='r' ? '<path d="M110 96h78" stroke="var(--text)" stroke-width="2.5"/><circle cx="110" cy="96" r="4" fill="var(--text)"/>' : '<path d="M32 96h156" stroke="var(--text)" stroke-width="2.5"/>'}
+  <text x="${mode==='r'?150:110}" y="88" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="Barlow,sans-serif">${label}</text></svg>`;
+const visRaffle = (w, total) => `<div class="raffle">${Array.from({length:total}, (_,i) => `<i class="${i < w ? 'win' : ''}"></i>`).join('')}</div><p class="muted" style="text-align:center;margin:8px 0 0">${total} tickets · ${w} winners</p>`;
+const visNights = vals => `<div class="nights">${vals.map((v,i) => `<div><i style="height:${v/Math.max(...vals)*110}px"></i><b>${v}</b><small>Night ${i+1}</small></div>`).join('')}</div>`;
+
+const GEN = {
+  div(t, ev){
+    if (t === 1){ const d = rnd(3,9), q = rnd(4,9), N = d*q, what = pick([['chairs','rows','chairs in each row'],['cables','crew members','cables each'],['lights','trusses','lights on each truss']]);
+      return {scene:`Set up ${N} ${what[0]} in ${d} equal ${what[1]} for ${evName(ev)}.`, ask:`How many ${what[2]}?`, ans:q, post:what[0],
+        vis:visShare(N, d, what[0]),
+        guide:[D(`Division is multiplication backwards. ${d} × ? = ${N}`, q, {hint:timesRow(d, 9)})]}; }
+    if (t === 2){ const d = rnd(3,9); let q; do { q = rnd(12, d <= 4 ? 99 : 60); } while (/0/.test(String(q)) || /0/.test(String(d*q))); const N = d*q;
+      return {scene:`${evName(ev)[0].toUpperCase() + evName(ev).slice(1)} has ${N} guests. They sit at ${d} long tables, the same number at each.`, ask:'How many guests at each table?', ans:q, post:'guests',
+        vis:visLong(N, d, 0), ld:{N, d, off:0},
+        guide:[...ldGuide(N, d), D(`Read the answer on top of the house: ${N} ÷ ${d} = ?`, q, {post:'guests'})]}; }
+    if (t === 3){ const d = rnd(4,9), q = rnd(14,45), r = rnd(1,d-1), N = d*q + r, kind = pick(['up','left','down']);
+      const sc = kind === 'up' ? {scene:`${N} guests are coming. Each table seats ${d}.`, ask:'How many tables do you need so everyone has a seat?', ans:q+1, post:'tables', last:`${N} ÷ ${d} = ${q} with ${r} left over. Those ${r} guests still need a seat. How many tables?`}
+        : kind === 'left' ? {scene:`You pack ${N} cable ties into bags of ${d}.`, ask:'How many ties are left over?', ans:r, post:'ties', last:`${N} ÷ ${d} = ${q} bags, remainder ?`}
+        : {scene:`Mic clips cost $${d} each. You have $${N}.`, ask:'How many clips can you buy?', ans:q, post:'clips', last:`${N} ÷ ${d} = ${q} with $${r} left. Can $${r} buy another clip? So how many clips?`};
+      return {scene:sc.scene, ask:sc.ask, ans:sc.ans, post:sc.post, vis:visLong(N, d, 0), ld:{N, d, off:0},
+        guide:[...ldGuide(N, d), D(sc.last, sc.ans, {post:sc.post, hint: kind === 'up' ? 'Leftover people still need somewhere to sit: add one more table.' : kind === 'left' ? 'The remainder is the number at the very bottom.' : 'You can’t buy part of a clip.'})]}; }
+    const d = pick([12,15,16,18,21,24,25,32]), q = rnd(12,38), N = d*q;
+    return {scene:`The ${evName(ev).replace(/^the /,'')} sound job pays $${fmt(N)}. You split it evenly over ${d} hours of work.`, ask:'How much is that per hour?', ans:q, pre:'$',
+      vis:visLong(N, d, 0), ld:{N, d, off:0},
+      guide:[...ldGuide(N, d), D(`Read the answer on top: $${fmt(N)} ÷ ${d} = ?`, q, {pre:'$'})]};
+  },
+  frb(t, ev){
+    if (t === 1){ const den = pick([3,4,5,6,8]), num = rnd(1, den-1), k = rnd(3,9), T = den*k;
+      return {scene:`${evName(ev)[0].toUpperCase() + evName(ev).slice(1)} has ${T} seats. ${raw(num,den)} of them are for the families.`, ask:'How many seats is that?', ans:num*k, post:'seats',
+        vis:visBar(den, num, `${T} seats in ${den} equal groups`),
+        guide:[D(`Split ${T} seats into ${den} equal groups: ${T} ÷ ${den}`, k, {post:'seats', hint:timesRow(den, 9)}), D(`Take ${num} of those groups: ${num} × ${k}`, num*k, {post:'seats'})]}; }
+    if (t === 2){ const [a,b] = pick([[1,2],[2,3],[3,4],[1,3],[3,5],[2,5],[5,6],[1,4]]), m = rnd(2,6), A = a*m, B = b*m;
+      const wrong = [[A/gcd(A,B) === a && B/gcd(A,B) === b ? A : A, B], [a+1 < b ? a+1 : a, b+1]].map(([x,y]) => `${x}/${y}`);
+      let opts = [`${a}/${b}`, `${A}/${B}`, `${a+1}/${b+1}`]; opts = [...new Set(opts)]; while (opts.length < 3) opts.push(`${a}/${b+2}`);
+      const order = [0,1,2].sort(() => Math.random() - .5), shown = order.map(i => opts[i]), ans = order.indexOf(0);
+      return {kind:'choice', choices:shown.map(x => { const [n,d] = x.split('/'); return raw(n,d); }), scene:`The sound check took ${A} of the ${B} minutes before the show.`, ask:'What fraction of the time is that, in simplest form?', ans,
+        vis:visBar(b, a, `${A} out of ${B} minutes`),
+        guide:[D(`Find the biggest number that goes into both ${A} and ${B}`, m, {hint:`Try ${m}: ${A} ÷ ${m} and ${B} ÷ ${m}. Do both come out even?`}),
+          D(`${A} ÷ ${m} = ?`, a), D(`${B} ÷ ${m} = ?`, b),
+          D(`So ${raw(A,B)} = ?`, ans, {kind:'choice', choices:shown.map(x => { const [n,d] = x.split('/'); return raw(n,d); })})]}; }
+    if (t === 3){ const den = pick([2,3,4,5,8]), w = rnd(2,6), r = rnd(1,den-1), N = w*den + r;
+      if (Math.random() < .5) return {scene:`You booked ${N} shifts that are each ${raw(1,den)} of an hour long.`, ask:'How many hours is that? Write it as a mixed number.', ans:w + r/den, post:'hours', frac:true, mixed:true,
+        vis:big(`${raw(N,den)} hours = ? hours`, 30),
+        guide:[D(`How many ${den}s fit into ${N}? That’s the whole hours.`, w, {hint:timesRow(den, 9)}), D(`What’s left over? ${N} − ${w*den}`, r),
+          D(`So ${raw(N,den)} = ${w} and ?/${den}. Type the mixed number`, w + r/den, {post:'hours', frac:true, hint:`Type ${w} space ${r}/${den}.`})]};
+      return {scene:`The band plays for ${w}${raw(r,den)} hours. Each song slot is ${raw(1,den)} of an hour.`, ask:'How many song slots is that?', ans:N, post:'slots',
+        vis:big(`${w}${raw(r,den)} = ${raw('?',den)}`, 30),
+        guide:[D(`Each whole hour has ${den} slots. ${w} × ${den} = ?`, w*den, {post:'slots'}), D(`Add the ${r} extra: ${w*den} + ${r}`, N, {post:'slots'})]}; }
+    const [a,b,c,d] = pick([[1,2,1,4],[1,3,1,6],[2,3,1,6],[1,2,1,3],[3,4,1,8],[1,4,2,3],[1,2,2,5],[3,8,1,4]]), L = b*d/gcd(b,d), sum = a/b + c/d;
+    return {scene:`Setting up the stage took ${raw(a,b)} of an hour. The sound check took ${raw(c,d)} of an hour.`, ask:'How long did both take together?', ans:sum, post:'hour', frac:true,
+      vis:big(`${raw(a,b)} + ${raw(c,d)} = ?`, 32),
+      guide:[D(`You can only add pieces of the same size. What’s the smallest number both ${b} and ${d} go into?`, L, {hint:`Count by ${Math.max(b,d)}s until ${Math.min(b,d)} goes in evenly.`}),
+        D(`${raw(a,b)} = ?/${L}`, a*L/b, {hint:`${b} × ${L/b} = ${L}, so do the same to the top: ${a} × ${L/b}.`}),
+        D(`${raw(c,d)} = ?/${L}`, c*L/d, {hint:`${d} × ${L/d} = ${L}, so do the same to the top: ${c} × ${L/d}.`}),
+        D(`Add the tops: ${a*L/b} + ${c*L/d} = ?/${L}`, a*L/b + c*L/d),
+        D(`So the total is ${raw(a*L/b + c*L/d, L)} of an hour. Type it (simplify if you can)`, sum, {post:'hour', frac:true})]};
+  },
+  dec(t, ev){
+    if (t === 1){ if (Math.random() < .5){ const a = rnd(8,40) + pick([.25,.5,.75,.4,.6,.85]), b = rnd(3,25) + pick([.25,.5,.75,.35,.65]), T = r2(a+b);
+        const ca = Math.round((a%1)*100), cb = Math.round((b%1)*100);
+        return {scene:`Gaffer tape costs $${fmt(a)} and batteries cost $${fmt(b)}.`, ask:'What is the total?', ans:T, pre:'$', vis:visReceipt([['Gaffer tape',a],['Batteries',b]]),
+          guide:[D(`Line up the decimal points. Add the cents first: ${ca}¢ + ${cb}¢ = ?`, ca+cb, {post:'¢'}),
+            D(`${ca+cb >= 100 ? `That’s $1 and ${ca+cb-100}¢. ` : ''}Add the dollars: ${Math.floor(a)} + ${Math.floor(b)}${ca+cb >= 100 ? ' + 1' : ''} = ?`, Math.floor(a) + Math.floor(b) + (ca+cb >= 100 ? 1 : 0), {pre:'$'}),
+            D('Put it together. Total = ?', T, {pre:'$'})]}; }
+      const cost = r2(rnd(11,46) + pick([.15,.4,.65,.8,.35])), paid = cost < 20 ? 20 : cost < 50 ? 50 : 100, ch = r2(paid - cost);
+      return {scene:`The ${evName(ev).replace(/^the /,'')} buys a cable for $${fmt(cost)} and pays with $${paid}.`, ask:'How much change do you give back?', ans:ch, pre:'$', vis:visReceipt([['Cable',cost]], `$${paid} paid`),
+        guide:[D(`Count up. From $${fmt(cost)} to the next whole dollar, $${Math.ceil(cost)}, is how many cents?`, Math.round((Math.ceil(cost)-cost)*100), {post:'¢'}),
+          D(`From $${Math.ceil(cost)} up to $${paid} is how many dollars?`, paid - Math.ceil(cost), {pre:'$'}),
+          D('Put it together. Change = ?', ch, {pre:'$'})]}; }
+    if (t === 2){ const u = r2(rnd(2,9) + pick([.25,.5,.75,.2,.4,.6])), n = rnd(3,9), T = r2(u*n), cents = Math.round((u%1)*100);
+      return {scene:`Each XLR cable costs $${fmt(u)}. You need ${n} of them.`, ask:'What do they cost all together?', ans:T, pre:'$', vis:visPacks([[n,T,'']]).replace(`${n} for ${money(T)}`, `${n} × $${fmt(u)}`),
+        guide:[D(`Dollars first: ${n} × $${Math.floor(u)} = ?`, n*Math.floor(u), {pre:'$'}), D(`Now the cents: ${n} × ${cents}¢ = ?`, n*cents, {post:'¢'}),
+          D(`${n*cents}¢ is $${fmt(n*cents/100)}. Add it on: total = ?`, T, {pre:'$'})]}; }
+    if (t === 3){ const n = rnd(3,8), uc = rnd(110, 990), T = r2(n*uc/100);
+      return {scene:`Your crew of ${n} earned $${fmt(T)} in tips. Split it equally.`, ask:'How much does each person get?', ans:uc/100, pre:'$',
+        vis:visLong(n*uc, n, 0), ld:{N:n*uc, d:n, off:1},
+        guide:[D(`Money is easier in cents. $${fmt(T)} = ? cents`, n*uc, {post:'¢', hint:'Move the decimal point 2 places right.'}),
+          ...ldGuide(n*uc, n), D(`Each gets ${uc}¢. Change it back to dollars`, uc/100, {pre:'$', hint:'Move the decimal point 2 places left.'})]}; }
+    const [a,b] = pick([[1,4],[3,4],[1,8],[3,8],[5,8],[2,5],[3,5],[1,20],[7,20]]), v = a/b, N = a*1000;
+    return {scene:`A spool of cable is ${raw(a,b)} of a mile long. The truck’s screen only shows decimals.`, ask:`What is ${raw(a,b)} as a decimal?`, ans:v, post:'mile',
+      vis:big(`${raw(a,b)} = ${a} ÷ ${b} = ?`, 30),
+      guide:[D(`${raw(a,b)} means ${a} ÷ ${b}. ${b} doesn’t fit into ${a}, so write ${a} as ${a}.000. Ignoring the point, what’s ${N} ÷ ${b}?`, N/b, {hint:`Long division: how many ${b}s fit into ${a*10}? Then bring down the next 0.`}),
+        D(`We used 3 zeros after the point, so move the decimal point 3 places left in ${N/b}. ${raw(a,b)} = ?`, v, {post:'mile'})]};
+  },
+  rate(t, ev){
+    if (t === 1){ const n = pick([4,6,8,12]), u = pick([1.25,1.75,2.25,2.75,3.5,4.25]), T = r2(n*u), c = Math.round(T*100), uc = Math.round(u*100);
+      return {scene:`A pack of ${n} mic cables costs $${fmt(T)}.`, ask:'What does one cable cost?', ans:u, pre:'$', vis:visPacks([[n,T,'']]),
+        guide:[D(`Money is easier in cents. $${fmt(T)} = ? cents`, c, {post:'¢', hint:'$1 = 100¢, so move the decimal point 2 places right.'}),
+          D(`Share the cents equally: ${c} ÷ ${n}`, uc, {post:'¢', hint:`${n} × 100 = ${n*100}, ${n} × 200 = ${n*200}, ${n} × 300 = ${n*300}… get close, then add on.`}),
+          D(`Change ${uc}¢ back to dollars`, u, {pre:'$', hint:'Move the decimal point 2 places left.'})]}; }
+    if (t === 2){ const h = pick([1.5,2.5,3.5]), s = pick([44,48,52,56,62]), m = s*h;
+      return {scene:`Your van drove ${fmt(m)} miles to ${evName(ev)} in ${mixed(h,2)} hours.`, ask:'What was its average speed?', ans:s, post:'mph', vis:visRoad(m, mixed(h,2)),
+        guide:[D(`Speed = miles ÷ hours. The half hour makes it tricky, so double both. ${mixed(h,2)} hours × 2 = ?`, h*2, {post:'hours'}),
+          D(`${fmt(m)} miles × 2 = ?`, m*2, {post:'miles'}),
+          D(`Now divide: ${fmt(m*2)} ÷ ${h*2}`, s, {post:'mph', hint:`${h*2} × 50 = ${h*2*50}. Is the answer more or less than 50?`})]}; }
+    if (t === 3){ const pool = [1.85,2.15,2.35,2.45,2.65,2.95]; const uA = pick(pool); let uB; do { uB = pick(pool); } while (uB === uA);
+      const nA = pick([10,12]), nB = pick([15,20]), pA = r2(nA*uA), pB = r2(nB*uB), best = uA < uB ? 0 : 1;
+      return {kind:'choice', choices:['Store A','Store B'], scene:`Store A sells ${nA} cables for $${fmt(pA)}. Store B sells ${nB} cables for $${fmt(pB)}.`, ask:'Which store has the lower unit price?', ans:best,
+        vis:visPacks([[nA,pA,'Store A'],[nB,pB,'Store B']]),
+        guide:[D(`Unit price at Store A: $${fmt(pA)} ÷ ${nA}`, uA, {pre:'$', hint: nA === 10 ? 'Dividing by 10: move the decimal point 1 place left.' : 'Try it in cents first.'}),
+          D(`Unit price at Store B: $${fmt(pB)} ÷ ${nB}`, uB, {pre:'$', hint: nB === 20 ? 'Divide by 10, then cut that in half.' : 'Divide by 5, then by 3.'}),
+          D(`$${fmt(uA)} or $${fmt(uB)}: which store is cheaper per cable?`, best, {kind:'choice', choices:['Store A','Store B']})]}; }
+    const [a,b,c,d] = pick([[3,4,1,4],[2,3,1,3],[1,2,1,4],[3,4,1,2],[2,3,1,6],[3,5,1,5],[5,6,1,3]]), r = (a*d)/(b*c);
+    return {scene:`Your crew coils ${raw(a,b)} of a cable spool in ${raw(c,d)} of an hour.`, ask:'At that rate, how many spools per hour?', ans:r, post:'spools', frac:true,
+      vis:big(`${raw(a,b)} spool ÷ ${raw(c,d)} hour = ?`, 28),
+      guide:[D(`To divide by ${raw(c,d)}, flip it to ${raw(d,c)} and multiply. Top numbers: ${a} × ${d}`, a*d),
+        D(`Bottom numbers: ${b} × ${c}`, b*c),
+        D(`So it’s ${raw(a*d,b*c)}. Simplify it to a whole or mixed number`, r, {post:'spools', frac:true, hint:`How many times does ${b*c} go into ${a*d}?`})]};
+  },
+  prop(t, ev){
+    if (t === 1){ const per = pick([30,40,50,60]), a = pick([2,3,4]), n = rnd(5,12);
+      return {scene:`The rule is ${a} speakers for every ${a*per} guests. ${n*per} guests are coming to ${evName(ev)}.`, ask:'How many speakers do you need?', ans:n, post:'speakers',
+        vis:visRatio(['Speakers','Guests'], [a, a*per], ['?', n*per]),
+        guide:[D(`How many guests does 1 speaker cover? ${a*per} ÷ ${a}`, per, {post:'guests'}), D(`Now: ${n*per} guests ÷ ${per}`, n, {post:'speakers'})]}; }
+    if (t === 2){ const h1 = pick([3,4,5]), rate = pick([37.5,42.5,47.5,55,62.5]), h2 = pick([6,7,8,9]), c1 = r2(h1*rate);
+      return {scene:`${h1} hours of sound cost $${fmt(c1)}.`, ask:`At the same rate, how much for ${h2} hours?`, ans:r2(rate*h2), pre:'$',
+        vis:visRatio(['Hours','Cost'], [h1, '$'+fmt(c1)], [h2, '?']),
+        guide:[D(`Find the cost of 1 hour: $${fmt(c1)} ÷ ${h1}`, rate, {pre:'$'}), D(`Now ${h2} hours: ${h2} × $${fmt(rate)}`, r2(rate*h2), {pre:'$', hint:`${h2} × ${Math.floor(rate)} = ${h2*Math.floor(rate)}, then add ${h2} × ${fmt(rate%1)}.`})]}; }
+    if (t === 3){ const a = pick([2,3,4]), b = pick([5,7,9]), k = rnd(4,9);
+      return {scene:`Fog juice is mixed ${a} ounces of fluid for every ${b} ounces of water. You pour in ${b*k} ounces of water.`, ask:'How many ounces of fluid do you add?', ans:a*k, post:'oz',
+        vis:visRatio(['Fluid','Water'], [a+' oz', b+' oz'], ['?', b*k+' oz']),
+        guide:[D(`How many times bigger is ${b*k} than ${b}? ${b*k} ÷ ${b}`, k), D(`The fluid grows the same way: ${a} × ${k}`, a*k, {post:'oz'})]}; }
+    const g1 = pick([1.5,2.5]), mpg = pick([14,16,18,22]), m1 = g1*mpg, g2 = pick([4,5,6,7]);
+    return {scene:`The tour bus goes ${fmt(m1)} miles on ${mixed(g1,2)} gallons of fuel.`, ask:`How far can it go on ${g2} gallons?`, ans:mpg*g2, post:'miles',
+      vis:visRatio(['Gallons','Miles'], [mixed(g1,2), fmt(m1)], [g2, '?']),
+      guide:[D(`Double both to get rid of the half. ${mixed(g1,2)} gallons × 2 = ?`, g1*2, {post:'gallons'}), D(`${fmt(m1)} miles × 2 = ?`, m1*2, {post:'miles'}),
+        D(`Miles per gallon: ${fmt(m1*2)} ÷ ${g1*2}`, mpg, {post:'mpg'}), D(`${g2} gallons: ${g2} × ${mpg}`, mpg*g2, {post:'miles'})]};
+  },
+  int(t, ev){
+    if (t === 1){ const i = 10*rnd(20,45), o = i + 10*rnd(2,12), d = o - i;
+      return {scene:`A snowstorm kept people home from ${evName(ev)}. Money in: $${i}. Money out: $${o}.`, ask:'What’s your profit? Use a minus sign for a loss.', ans:-d, pre:'$',
+        vis:visLedger(i, [['Hall and crew', o]]),
+        guide:[D('Which is bigger, the money in or the money out?', 1, {kind:'choice', choices:['Money in','Money out']}), D(`How much bigger? $${o} − $${i}`, d, {pre:'$'}),
+          D(`More went out than came in, so it’s a loss. Write it with a minus sign`, -d, {pre:'$', hint:'Tap the − key, then type the number.'})]}; }
+    if (t === 2){ const s = -10*rnd(5,20), job = 10*rnd(15,40), sp = 5*rnd(8,40), e = s + job - sp;
+      return {scene:`Your account is at −$${-s} because you owe the rental shop. You earn $${job} from a job, then spend $${sp} on cables.`, ask:'What’s your balance now?', ans:e, pre:'$',
+        vis:visChain([['Start', s],['Job', job],['Cables', -sp]]),
+        guide:[D(`Start + job: −${-s} + ${job}`, s+job, {pre:'$', hint: s+job >= 0 ? `First the $${job} pays off the $${-s} you owe. What’s left?` : `The $${job} isn’t enough to pay off all $${-s}. How much do you still owe? Use a minus sign.`}),
+          D(`Now take away the cables: ${s+job} − ${sp}`, e, {pre:'$', hint: e < 0 ? 'This goes below zero, so the answer is negative.' : ''})]}; }
+    if (t === 3){ const hi = rnd(3,15), lo = -rnd(3,14);
+      return {scene:`It’s an outdoor Chanukah lighting. At 4 p.m. it was ${hi}°F. By 9 p.m. it was ${lo}°F.`, ask:'How many degrees did the temperature drop?', ans:hi-lo, post:'degrees',
+        vis:visTherm(hi, lo),
+        guide:[D(`From ${hi}° down to 0° is how many degrees?`, hi, {post:'degrees'}), D(`From 0° down to ${lo}° is how many more?`, -lo, {post:'degrees'}), D(`Add them: ${hi} + ${-lo}`, hi-lo, {post:'degrees'})]}; }
+    const L = 5*rnd(6,20), w = rnd(4,9);
+    return Math.random() < .5
+      ? {scene:`Your old speakers broke, so you lose $${L} of business every week for ${w} weeks.`, ask:'What’s the total change in your money? Use a minus sign.', ans:-L*w, pre:'$',
+          vis:big(`${w} × (−$${L}) = ?`, 30),
+          guide:[D(`Ignore the sign for now: ${w} × ${L}`, w*L, {pre:'$'}), D(`A positive times a negative is negative. So the total change is`, -w*L, {pre:'$', hint:'Put a minus sign in front.'})]}
+      : {scene:`Over ${w} slow weeks, your money changed by −$${fmt(L*w)} in all.`, ask:'What was the average change per week? Use a minus sign.', ans:-L, pre:'$',
+          vis:big(`−$${fmt(L*w)} ÷ ${w} = ?`, 30),
+          guide:[D(`Ignore the sign for now: ${fmt(L*w)} ÷ ${w}`, L, {pre:'$'}), D(`A negative divided by a positive is negative. So the average change is`, -L, {pre:'$'})]};
+  },
+  pct(t, ev){
+    if (t === 1){ const P = pick([35,45,48,65,85,120,145]), one = r2(P/100), tax = r2(P*.06);
+      return {scene:`You buy a new mic stand for $${P}. Michigan adds 6% sales tax.`, ask:'How much do you pay in all?', ans:r2(P+tax), pre:'$', vis:visTen(.6, `6% of $${P}`),
+        guide:[D(`Find 1% of $${P}: move the decimal point 2 places left`, one, {pre:'$'}), D(`6% is 6 times that: 6 × $${fmt(one)}`, tax, {pre:'$'}), D(`Add the tax: $${P} + $${fmt(tax)}`, r2(P+tax), {pre:'$'})]}; }
+    if (t === 2){ const P = pick([180,240,320,460,560,680]), d = pick([15,20,25,30,35]), disc = P*d/100;
+      return {scene:`${ev.c} books early, so you give him ${d}% off your $${P} price.`, ask:'What’s the new price?', ans:P-disc, pre:'$', vis:visTen(d, `$${P} price`),
+        guide:[...pctGuide(P, d), D(`Take the discount off: $${P} − $${fmt(disc)}`, P-disc, {pre:'$'})]}; }
+    if (t === 3){ let a, ch, b; do { a = pick([80,120,160,200,240,400]); ch = pick([15,20,25,30,40,-10,-20,-25]); b = a*(100+ch)/100; } while (!Number.isInteger(b));
+      const diff = Math.abs(b - a);
+      return {scene:`Last year ${a} people came to ${evName(ev)}. This year ${b} came.`, ask:`By what percent did the crowd ${ch > 0 ? 'grow' : 'shrink'}?`, ans:Math.abs(ch), post:'%',
+        vis:visRatio(['Year','People'], ['Last year', a], ['This year', b]),
+        guide:[D(`How much did it change? ${Math.max(a,b)} − ${Math.min(a,b)}`, diff, {post:'people'}), D(`Compare the change to last year: ${diff} ÷ ${a}`, Math.abs(ch)/100, {hint:'Your answer will be a decimal less than 1.'}), D(`Turn the decimal into a percent: × 100`, Math.abs(ch), {post:'%'})]}; }
+    if (Math.random() < .5){ const P = pick([1200,2400,3000,4500]), r = pick([4,5,6]), y = pick([2,3,4]), one = P*r/100;
+      return {scene:`You borrow $${fmt(P)} for new speakers at ${r}% simple interest per year.`, ask:`How much interest do you owe after ${y} years?`, ans:one*y, pre:'$', vis:visTen(r, `${r}% of $${fmt(P)}, every year`),
+        guide:[D(`One year: ${r}% of $${fmt(P)}. First 1%: $${fmt(P)} ÷ 100`, P/100, {pre:'$'}), D(`${r}% is ${r} × $${fmt(P/100)}`, one, {pre:'$'}), D(`${y} years: ${y} × $${fmt(one)}`, one*y, {pre:'$'})]}; }
+    const c = pick([80,120,160,240]), m = pick([25,40,50,75]), add = c*m/100;
+    return {scene:`You buy a speaker for $${c} and rent it out with a ${m}% markup.`, ask:'What’s the rental price?', ans:c+add, pre:'$', vis:visTen(m, `${m}% of $${c}`),
+      guide:[...pctGuide(c, m).map(s => (s.ans === add ? Object.assign({}, s, {q:s.q + ' (that’s the markup)'}) : s)), D(`Add the markup: $${c} + $${fmt(add)}`, c+add, {pre:'$'})]};
+  },
+  frac(t, ev){
+    if (t === 1){ const n = pick([4,6,8]), w = pick([2,3,4]), q = pick([1,3]), tot = n*(w + q/4);
+      return {scene:`Each mic cable is ${w}${raw(q,4)} feet long. You need ${n} of them.`, ask:'How many feet of cable is that in all?', ans:tot, post:'feet', frac:true,
+        vis:visLengths(Array.from({length:Math.min(n,4)}, (_,i) => [w+q/4, `${w}${raw(q,4)}`, `Cable ${i+1}`]).concat(n > 4 ? [] : [])),
+        guide:[D(`The whole feet: ${n} × ${w}`, n*w, {post:'feet'}), D(`The fractions: ${n} × ${raw(q,4)} = ${raw(n*q,4)}. How many feet is that?`, n*q/4, {post:'feet', frac:true, hint:`${n*q} ÷ 4. Every 4 fourths make 1 whole foot.`}), D(`Add them: ${n*w} + ${mixed(n*q/4)}`, tot, {post:'feet', frac:true})]}; }
+    if (t === 2){ const [pn,pd] = pick([[3,2],[5,2],[3,4],[5,4]]), k = pd === 2 ? 2*rnd(3,8) : 4*rnd(2,4), S = k*pn/pd;
+      return {scene:`You cut a ${S}-foot cable into pieces ${fr(pn,pd)} feet long.`, ask:'How many pieces do you get?', ans:k, post:'pieces', vis:big(`${S} ÷ ${fr(pn,pd)} = ?`, 30),
+        guide:[D(`Write ${fr(pn,pd)} as a fraction: ${fr(pn,pd)} = ?/${pd}`, pn, {post:`/${pd}`, hint: pn > pd ? `${Math.floor(pn/pd)} whole = ${Math.floor(pn/pd)*pd}/${pd}, plus ${pn%pd}/${pd}.` : ''}),
+          D(`Dividing by ${raw(pn,pd)} means multiplying by ${raw(pd,pn)}. First: ${S} × ${pd}`, S*pd), D(`Now divide by ${pn}: ${S*pd} ÷ ${pn}`, k, {post:'pieces'})]}; }
+    if (t === 3){ const [a,b] = pick([[3,4],[2,3],[3,5],[5,6]]), A = rnd(2,6), tn = A*b, isWhole = tn % a === 0;
+      const g = [];
+      if (!isWhole) g.push(D(`Write ${fr(tn,a)} as an improper fraction: ?/${a}`, tn, {post:`/${a}`, hint:`${Math.floor(tn/a)} × ${a} + ${tn%a}`}));
+      g.push(D(`Multiply ${raw(a,b)} × ${raw(tn,a)}. Top numbers: ${a} × ${tn}`, a*tn), D(`Bottom numbers: ${b} × ${a}`, a*b), D(`Simplify ${raw(a*tn,a*b)}`, A, {post:'hours', hint:`${a*tn} ÷ ${a*b}`}));
+      return {scene:`Setting up for ${evName(ev)} takes ${fr(tn,a)} hours. ${raw(a,b)} of that time goes to the lights.`, ask:'How many hours go to the lights?', ans:A, post:'hours', vis:big(`${raw(a,b)} × ${fr(tn,a)} = ?`, 30), guide:g}; }
+    const [pn,pd] = pick([[9,4],[3,2],[7,4],[5,2],[5,3]]), k = rnd(3,8);
+    return {scene:`A ${fr(k*pn,pd)}-foot roll of LED strip is cut into pieces ${fr(pn,pd)} feet long.`, ask:'How many pieces?', ans:k, post:'pieces', vis:big(`${fr(k*pn,pd)} ÷ ${fr(pn,pd)} = ?`, 30),
+      guide:[D(`Write ${fr(k*pn,pd)} as a fraction over ${pd}: ?/${pd}`, k*pn, {post:`/${pd}`, hint:`whole number × ${pd}, plus the top number`}), D(`Write ${fr(pn,pd)} over ${pd}: ?/${pd}`, pn, {post:`/${pd}`}), D(`Same bottoms, so divide the tops: ${k*pn} ÷ ${pn}`, k, {post:'pieces'})]};
+  },
+  eq(t, ev){
+    if (t === 1){ const fee = pick([40,50,60,75]), r = pick([25,30,35,45]), h = rnd(3,8), T = fee + r*h;
+      return {scene:`You charge a $${fee} setup fee plus $${r} an hour. ${ev.c}’s bill came to $${T}.`, ask:'How many hours did you work?', ans:h, post:'hours',
+        vis:visEq([`$${fee} fee`, `$${r} × h`], `$${T}`),
+        guide:[D(`The equation is ${fee} + ${r}h = ${T}. Undo the fee first: ${T} − ${fee}`, T-fee, {pre:'$'}), D(`Now ${r}h = ${T-fee}. Undo the times: ${T-fee} ÷ ${r}`, h, {post:'hours'})]}; }
+    if (t === 2){ const m = pick([12.5,14.5,17.5]), base = pick([45,60,85]), x = rnd(6,14), T = r2(base + m*x);
+      return {scene:`A yeshiva rents microphones from you at $${fmt(m)} each, plus a $${base} delivery charge. Their bill was $${fmt(T)}.`, ask:'How many microphones did they rent?', ans:x, post:'mics',
+        vis:visEq([`$${base} delivery`, `$${fmt(m)} × m`], `$${fmt(T)}`),
+        guide:[D(`Undo the delivery charge: ${fmt(T)} − ${base}`, r2(T-base), {pre:'$'}), D(`Undo the times: ${fmt(T-base)} ÷ ${fmt(m)}`, x, {post:'mics', hint:`Try guesses: ${fmt(m)} × 10 = ${fmt(m*10)}.`})]}; }
+    if (t === 3){ const n = pick([3,4,5]), bonus = pick([10,15,20,25]), s = rnd(40,90);
+      return {scene:`Tonight’s pay is split evenly between your ${n} crew members. Then each one gets a $${bonus} bonus. Each person ends up with $${s+bonus}.`, ask:'What was tonight’s total pay?', ans:n*s, pre:'$',
+        vis:visEq([`pay ÷ ${n}`, `$${bonus} bonus`], `$${s+bonus}`),
+        guide:[D(`The equation is p ÷ ${n} + ${bonus} = ${s+bonus}. Undo the bonus: ${s+bonus} − ${bonus}`, s, {pre:'$'}), D(`That’s one person’s share. Undo the split: ${s} × ${n}`, n*s, {pre:'$'})]}; }
+    const have = pick([120,150,180,240]), per = pick([35,45,55,65]), k = rnd(6,12), goal = have + per*k - rnd(1, per-1), need = goal - have;
+    return {scene:`You want to save at least $${goal} for a new mixing board. You have $${have}, and you save $${per} from every job.`, ask:'What’s the fewest jobs you need?', ans:k, post:'jobs',
+      vis:visEq([`$${have}`, `$${per} × j`], `at least $${goal}`),
+      guide:[D(`The inequality is ${have} + ${per}j ≥ ${goal}. Undo the $${have}: ${goal} − ${have}`, need, {pre:'$'}),
+        D(`How many whole times does ${per} fit into ${need}?`, k-1, {hint:`${per} × ${k-1} = ${per*(k-1)}`}),
+        D(`${per} × ${k-1} = ${per*(k-1)}, which is still short of ${need}. So you need one more job. Fewest jobs:`, k, {post:'jobs'})]};
+  },
+  geo(t, ev){
+    if (t === 1){ const sc = pick([2,4,6,8]), pn = 2*rnd(4,12) + 1, whole = (pn-1)/2, real = pn*sc/2;
+      return {scene:`On your stage plan, 1 inch stands for ${sc} feet. The stage is ${fr(pn,2)} inches wide on the plan.`, ask:'How wide is the real stage?', ans:real, post:'feet',
+        vis:visRect(pn/2, 2.5, `${fr(pn,2)} in on the plan`, '', `1 inch = ${sc} feet`),
+        guide:[D(`The whole inches: ${whole} × ${sc}`, whole*sc, {post:'feet'}), D(`The half inch is half of ${sc}`, sc/2, {post:'feet'}), D(`Add them: ${whole*sc} + ${sc/2}`, real, {post:'feet'})]}; }
+    if (t === 2){ const sc = pick([3,4,5]), L = rnd(4,8), W = rnd(2,5), rl = L*sc, rw = W*sc;
+      return {scene:`On the plan, the stage is ${L} inches by ${W} inches. 1 inch stands for ${sc} feet. You need to carpet the whole stage.`, ask:'How many square feet of carpet?', ans:rl*rw, post:'sq ft',
+        vis:visRect(L, W, `${L} in`, `${W} in`, `1 inch = ${sc} feet`),
+        guide:[D(`Real length: ${L} × ${sc}`, rl, {post:'feet'}), D(`Real width: ${W} × ${sc}`, rw, {post:'feet'}), D(`Area = length × width: ${rl} × ${rw}`, rl*rw, {post:'sq ft'})]}; }
+    if (t === 3){ const d = pick([6,8,10,12,14,20]), C = r2(3.14*d);
+      return {scene:`A round dance floor is ${d} feet across. You run LED lights all the way around the edge. Use π ≈ 3.14.`, ask:'How many feet of lights?', ans:C, post:'feet', vis:visCircle(`${d} ft`, 'edge'),
+        guide:[D(`Around a circle = π × diameter = 3.14 × ${d}. Start with 3 × ${d}`, 3*d), D(`Now the 0.14 part: 0.14 × ${d}`, r2(.14*d), {hint:`14 × ${d} = ${14*d}, then move the decimal point 2 places left.`}), D(`Add them: ${3*d} + ${fmt(.14*d)}`, C, {post:'feet'})]}; }
+    const r = pick([3,4,5,6,8,10]), A = r2(3.14*r*r);
+    return {scene:`A round stage has a radius of ${r} feet. You cover it with carpet. Use π ≈ 3.14.`, ask:'How many square feet of carpet?', ans:A, post:'sq ft', vis:visCircle(`r = ${r} ft`, 'r'),
+      guide:[D(`Area = π × r × r. First r × r: ${r} × ${r}`, r*r), D(`Now 3.14 × ${r*r}. Start with 3 × ${r*r}`, 3*r*r), D(`Then 0.14 × ${r*r}`, r2(.14*r*r), {hint:`14 × ${r*r} = ${14*r*r}, then move the decimal point 2 places left.`}), D(`Add them: ${3*r*r} + ${fmt(.14*r*r)}`, A, {post:'sq ft'})]};
+  },
+  prob(t, ev){
+    if (t === 1){ const n = pick([4,5]), m = rnd(60,140); let vals; do { vals = Array.from({length:n-1}, () => m + rnd(-30,30)); vals.push(m*n - vals.reduce((a,b) => a+b, 0)); } while (vals[n-1] < 20 || vals[n-1] > 220);
+      const sum = m*n;
+      return {scene:`Tickets sold each night of the ${pick(['Chanukah','winter','summer'])} concert series: ${vals.join(', ')}.`, ask:'What’s the average (mean) per night?', ans:m, post:'tickets', vis:visNights(vals),
+        guide:[D(`Add them all up: ${vals.join(' + ')}`, sum, {hint:'Add two at a time, and use the scratch pad.'}), D(`Divide by the number of nights: ${sum} ÷ ${n}`, m, {post:'tickets'})]}; }
+    if (t === 2){ const [w,total] = pick([[5,40],[4,24],[6,30],[3,24],[8,40],[6,48],[4,20],[9,36]]), g = gcd(w,total);
+      return {scene:`There are ${total} raffle tickets in the bucket at ${evName(ev)}. ${w} of them win a prize.`, ask:'What’s the chance a ticket wins? Write it as a fraction in simplest form.', ans:w/total, frac:true, vis:visRaffle(w,total),
+        guide:[D(`Chance = winners ÷ all tickets = ${raw(w,total)}. Simplify: divide the top by ${g}. ${w} ÷ ${g}`, w/g), D(`Divide the bottom by ${g} too: ${total} ÷ ${g}`, total/g), D(`So the chance is`, w/total, {frac:true, hint:`${w/g}/${total/g}`})]}; }
+    if (t === 3){ const [a,b] = pick([[3,8],[2,5],[3,4],[5,6],[2,3]]), N = b*rnd(15,40);
+      return {scene:`At events like this, about ${raw(a,b)} of the guests buy a raffle ticket. ${N} guests are coming.`, ask:'About how many will buy a ticket?', ans:N*a/b, post:'guests', vis:visBar(b, a, `${N} guests`),
+        guide:[D(`Find ${raw(1,b)} of ${N}: ${N} ÷ ${b}`, N/b), D(`${raw(a,b)} is ${a} of those: ${a} × ${N/b}`, N*a/b, {post:'guests'})]}; }
+    const k1 = pick([3,4,5]), k2 = pick([4,5,6]);
+    return {scene:`You pick 1 of ${k1} opening songs and 1 of ${k2} closing songs at random.`, ask:'What’s the chance you get one exact pair you want? Write it as a fraction.', ans:1/(k1*k2), frac:true,
+      vis:big(`${k1} openers × ${k2} closers`, 26),
+      guide:[D(`How many different pairs are possible? ${k1} × ${k2}`, k1*k2, {post:'pairs'}), D(`Only 1 of those pairs is the one you want. The chance is 1 out of ${k1*k2}`, 1/(k1*k2), {frac:true, hint:`Type 1/${k1*k2}`})]};
+  }
+};
+
+/* ===== lesson videos ===== */
+const LESSONS = {
+  div:[
+    {cap:'Division means sharing equally. 84 guests at 3 tables: how many at each table? We write it as 84 ÷ 3.', vis:visShare(84, 3, 'guests')},
+    {cap:'Long division goes one step at a time, left to right. Start with 8. How many 3s fit into 8? Two, because 3 × 2 = 6 and 3 × 3 = 9 is too big. Write the 2 on top.', vis:visLong(84, 3, 1)},
+    {cap:'Subtract what you used: 8 − 6 = 2. Then bring down the 4 to make 24.', vis:visLong(84, 3, 2)},
+    {cap:'How many 3s fit into 24? Eight, because 3 × 8 = 24. Write the 8 on top. 24 − 24 = 0, nothing left.', vis:visLong(84, 3, 4)},
+    {cap:'The answer is on top: 84 ÷ 3 = 28. Check it: 28 × 3 = 84. ✓', vis:visLong(84, 3, 5)},
+    {cap:'Sometimes some is left over. 130 guests, 8 per table: 16 tables with 2 guests left. Those 2 still need a seat, so you need 17 tables.', vis:visLong(130, 8, 9)}],
+  frb:[
+    {cap:'A fraction is a piece of something split into equal parts. The bottom number is how many parts, the top is how many you take.', vis:visBar(4, 3, '3 out of 4 equal parts')},
+    {cap:`To find ${raw(3,4)} of 24 seats: divide by the bottom (24 ÷ 4 = 6 in each part), then multiply by the top (3 × 6 = 18).`, vis:visBar(4, 3, '24 seats: 6 in each part')},
+    {cap:`Simplify by dividing top and bottom by the same number. ${raw(18,24)}: both divide by 6, so it’s ${raw(3,4)}.`, vis:big(`${raw(18,24)} = ${raw(3,4)}`, 34)},
+    {cap:`A top-heavy fraction is a division problem. ${raw(11,4)}: 4 fits into 11 two times with 3 left, so it’s 2${raw(3,4)}.`, vis:big(`${raw(11,4)} = 2${raw(3,4)}`, 34)},
+    {cap:`To add, make the pieces the same size. ${raw(1,2)} + ${raw(1,4)}: ${raw(1,2)} is ${raw(2,4)}, so ${raw(2,4)} + ${raw(1,4)} = ${raw(3,4)}.`, vis:big(`${raw(1,2)} + ${raw(1,4)} = ${raw(2,4)} + ${raw(1,4)} = ${raw(3,4)}`, 28)}],
+  dec:[
+    {cap:'Money is the easiest way to see decimals. $12.75 means 12 dollars and 75 cents: 75 hundredths of a dollar.', vis:big('$12.75 = 12 dollars + 75¢', 30)},
+    {cap:'Adding: line up the decimal points. $12.75 + $8.50: cents first, 75 + 50 = 125¢, that’s $1.25. Then 12 + 8 + 1 = $21. Total $21.25.', vis:visReceipt([['Gaffer tape',12.75],['Batteries',8.5]], '$21.25')},
+    {cap:'Dividing money: change it to cents, use long division, then change back. $15.60 ÷ 4 → 1,560¢ ÷ 4 = 390¢ = $3.90.', vis:visLong(1560, 4, 8)},
+    {cap:`A fraction is a division, so you can turn it into a decimal. ${raw(3,4)} = 3 ÷ 4 = 0.75, just like 3 quarters is 75¢.`, vis:big(`${raw(3,4)} = 3 ÷ 4 = 0.75`, 32)}],
+  rate:[
+    {cap:'A rate tells you how much for ONE: one cable, one hour, one mile.', vis:visPacks([[6,16.5,'']])},
+    {cap:'$16.50 for 6 cables. Money is easier in cents: $16.50 is 1,650¢.', vis:big('$16.50 = 1,650¢', 32)},
+    {cap:'Share it: 1,650 ÷ 6 = 275¢. That’s $2.75 for one cable, the unit price.', vis:big('1,650 ÷ 6 = 275¢ = $2.75', 30)},
+    {cap:`Speed is a rate too: miles ÷ hours. 130 miles in 2${raw(1,2)} hours? Double both to get rid of the half: 260 ÷ 5 = 52 miles per hour.`, vis:visRoad(130, `2${raw(1,2)}`)}],
+  prop:[
+    {cap:'In a proportion, two things grow together. Here it’s 2 speakers for every 80 guests.', vis:visRatio(['Speakers','Guests'], [2,80], ['?',280])},
+    {cap:'Find the amount for one: 80 ÷ 2 = 40 guests per speaker.', vis:big('80 ÷ 2 = 40 guests each', 30)},
+    {cap:'Now use it: 280 guests ÷ 40 = 7 speakers.', vis:big('280 ÷ 40 = 7 speakers', 30)},
+    {cap:'Or scale up. 3 oz of fluid for 5 oz of water. 40 oz of water is 8 times 5, so the fluid is 8 × 3 = 24 oz.', vis:visRatio(['Fluid','Water'], ['3 oz','5 oz'], ['24 oz','40 oz'])}],
+  int:[
+    {cap:'Negative numbers are below zero: money you owe, a loss, or freezing cold.', vis:visTherm(9, -7)},
+    {cap:'If you make $350 but spend $420, you’re $70 short. Your profit is −$70.', vis:visLedger(350, [['Hall and crew',420]])},
+    {cap:'From −7° up to 9°: 7 degrees to get to zero, then 9 more. That’s 16 degrees.', vis:big('7 + 9 = 16°', 32)},
+    {cap:'A positive times a negative is negative. Losing $45 a week for 6 weeks: 6 × (−45) = −270.', vis:big('6 × (−$45) = −$270', 30)}],
+  pct:[
+    {cap:'Percent means “out of 100.” To find 1%, move the decimal point 2 places left. 1% of $45 is $0.45.', vis:visTen(.1, '1% of $45 = $0.45')},
+    {cap:'Sales tax of 6%: 6 × $0.45 = $2.70. You pay $45 + $2.70 = $47.70.', vis:visTen(.6, '6% of $45 = $2.70')},
+    {cap:'A 20% discount on $240: 10% is $24, so 20% is $48. The new price is $240 − $48 = $192.', vis:visTen(20, '20% of $240 = $48')},
+    {cap:'Percent change: divide the change by the starting number. 200 people became 250: that’s 50 more. 50 ÷ 200 = 0.25 = 25%.', vis:visRatio(['Year','People'], ['Last year',200], ['This year',250])}],
+  frac:[
+    {cap:`Multiplying a mixed number: 6 × 2${raw(3,4)}. Wholes first: 6 × 2 = 12. Then 6 × ${raw(3,4)} = ${raw(18,4)} = 4${raw(1,2)}. Total: 16${raw(1,2)}.`, vis:big(`6 × 2${raw(3,4)} = 16${raw(1,2)}`, 30)},
+    {cap:`To change a mixed number into a fraction: 2${raw(1,2)} = ${raw(5,2)}, because 2 × 2 + 1 = 5.`, vis:big(`2${raw(1,2)} = ${raw(5,2)}`, 32)},
+    {cap:`Dividing by a fraction: flip it and multiply. 20 ÷ ${raw(5,2)} = 20 × ${raw(2,5)} = 40 ÷ 5 = 8.`, vis:big(`20 ÷ ${raw(5,2)} = 20 × ${raw(2,5)} = 8`, 28)},
+    {cap:`Fraction times fraction: tops times tops, bottoms times bottoms. ${raw(3,4)} × ${raw(8,3)} = ${raw(24,12)} = 2.`, vis:big(`${raw(3,4)} × ${raw(8,3)} = ${raw(24,12)} = 2`, 30)}],
+  eq:[
+    {cap:'An equation is a balance. $50 fee plus $30 for each hour equals a $170 bill. How many hours?', vis:visEq(['$50 fee','$30 × h'], '$170')},
+    {cap:'Undo things backwards. First take away the fee: 170 − 50 = 120.', vis:big('30h = 120', 32)},
+    {cap:'Then undo the times: 120 ÷ 30 = 4. So h = 4 hours. Check it: 50 + 30 × 4 = 170. ✓', vis:big('h = 4', 36)},
+    {cap:'“At least” makes an inequality. If the answer comes out to 10.4 jobs, you can’t do part of a job, so round up to 11.', vis:visEq(['$150','$45 × j'], 'at least $620')}],
+  geo:[
+    {cap:'On a scale plan, 1 inch stands for a number of real feet. Here 1 inch = 4 feet.', vis:visRect(6.5, 3, `6${raw(1,2)} in`, '3 in', '1 inch = 4 feet')},
+    {cap:`Real size = plan inches × feet per inch. 6${raw(1,2)} × 4 = 24 + 2 = 26 feet.`, vis:big(`6${raw(1,2)} × 4 = 26 feet`, 30)},
+    {cap:'Area of a rectangle = length × width. A 26 ft by 12 ft stage is 312 square feet.', vis:visRect(26, 12, '26 ft', '12 ft', 'Area = 26 × 12 = 312 sq ft')},
+    {cap:'Circles use π ≈ 3.14. The distance around = π × diameter. The area = π × radius × radius.', vis:visCircle('r', 'r')}],
+  prob:[
+    {cap:'The average (mean): add everything up, then divide by how many there are.', vis:visNights([80,120,100,100])},
+    {cap:'80 + 120 + 100 + 100 = 400. Divide by 4 nights: 100 tickets per night.', vis:big('400 ÷ 4 = 100', 32)},
+    {cap:`Probability = ways to win ÷ all the possibilities. 5 winners out of 40 tickets = ${raw(5,40)} = ${raw(1,8)}.`, vis:visRaffle(5,40)},
+    {cap:`Predicting: if ${raw(3,8)} of 240 guests buy a ticket, that’s 240 ÷ 8 × 3 = 90 guests.`, vis:visBar(8, 3, '240 guests')}]
+};
+
+function seeded(i){ const x = Math.sin(i*99.13)*43758.5453; return x - Math.floor(x); }
+function stageSVG(o){
+  const g = o.gear || {}, crowd = o.crowd || 0, mode = o.mode || 'idle', nm = o.name || '';
+  const lamps = [170,260,350,450,540,630], cols = ['#f0b44c','#6cc7d9','#f0b44c','#e07a5f','#6cc7d9','#f0b44c'];
+  let s = `<svg viewBox="0 0 800 372" class="${mode}" role="img" aria-label="Your stage">
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2134"/><stop offset="1" stop-color="#0d0f19"/></linearGradient>
+    <linearGradient id="flG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b4a2f"/><stop offset="1" stop-color="#3b281a"/></linearGradient>
+    ${cols.map((c,i)=>`<linearGradient id="bm${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".7"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient>`).join('')}
+    <linearGradient id="spG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f3ff" stop-opacity=".55"/><stop offset="1" stop-color="#e9f3ff" stop-opacity="0"/></linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="12"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+    <radialGradient id="flareG"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".25" stop-color="#ffe3a6" stop-opacity=".6"/><stop offset="1" stop-color="#ffe3a6" stop-opacity="0"/></radialGradient>
+    ${cols.map((c,i)=>`<radialGradient id="pl${i}"><stop offset="0" stop-color="${c}" stop-opacity=".75"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>`).join('')}
+    <clipPath id="ledClip"><rect x="214" y="44" width="372" height="152" rx="4"/></clipPath>
+  </defs>
+  <rect width="800" height="372" fill="url(#bgG)"/>
+  <path d="M0 0h78v250c-18 0-38-4-78-2z" fill="#3a1c27"/><path d="M800 0h-78v250c18 0 38-4 78-2z" fill="#3a1c27"/>
+  ${[14,30,46,62].map(x=>`<path d="M${x} 0v248M${800-x} 0v248" stroke="#2a121b" stroke-width="5"/>`).join('')}
+  <rect x="0" y="0" width="800" height="18" fill="#2a121b"/>`;
+  if (g.led){
+    s += `<rect x="214" y="44" width="372" height="152" rx="4" fill="#090b14" stroke="#2c3348" stroke-width="3"/>`;
+    for (let r=0;r<6;r++) for (let c=0;c<15;c++){
+      const hue = (c*14 + r*22) % 360;
+      s += `<rect class="ledcell" style="animation-delay:${((r+c)%7)*.12}s" x="${222+c*24}" y="${52+r*24}" width="20" height="20" rx="2" fill="hsl(${hue} 70% 55%)"/>`;
+    }
+    if (mode === 'show'){
+      s += `<g clip-path="url(#ledClip)"><rect x="214" y="44" width="372" height="152" fill="#05060b" opacity=".55"/>`;
+      for (let k=0;k<18;k++) s += `<rect class="eqbar" style="animation-delay:${(seeded(k+40)*.45).toFixed(2)}s;animation-duration:${(.3+seeded(k+60)*.35).toFixed(2)}s" x="${224+k*20}" y="${70+seeded(k+20)*30}" width="14" height="${110-seeded(k+20)*30}" rx="2" fill="hsl(${(k*20)%360} 80% 60%)" opacity=".8"/>`;
+      if (nm) s += `<text class="marq" x="214" y="132" font-family="'Big Shoulders Display',Impact,sans-serif" font-weight="800" font-size="56" fill="#fff8ea">${esc(nm)}</text>`;
+      s += `</g>`;
+    }
+  }
+  if (g.lights){
+    s += `<g class="beams">`;
+    lamps.forEach((x,i) => { s += `<polygon class="beam" style="animation-delay:-${(i*1.3).toFixed(1)}s" points="${x-8},40 ${x+8},40 ${x+60},250 ${x-60},250" fill="url(#bm${i})"/>`; });
+    s += `</g>`;
+    lamps.forEach((x,i) => { s += `<ellipse class="pool" cx="${x}" cy="262" rx="70" ry="14" fill="url(#pl${i})"/>`; });
+    s += `<rect x="120" y="24" width="560" height="10" fill="#7d8291"/>`;
+    for (let x=124;x<676;x+=16) s += `<path d="M${x} 24l8 10l8-10" stroke="#545867" stroke-width="2" fill="none"/>`;
+    lamps.forEach((x,i) => { s += `<rect x="${x-9}" y="32" width="18" height="14" rx="3" fill="#2b2f3b"/><circle class="lamp" style="animation-delay:${(.3+i*.12).toFixed(2)}s" cx="${x}" cy="44" r="5" fill="${mode==='show'?cols[i]:'#8a8f9e'}"/><circle class="flare" cx="${x}" cy="46" r="20" fill="url(#flareG)"/>`; });
+  } else {
+    s += `<g class="beams"><polygon class="beam" points="392,0 408,0 520,250 280,250" fill="url(#bm0)"/></g><ellipse class="pool" cx="400" cy="262" rx="140" ry="18" fill="url(#pl0)"/>`;
+  }
+  for (let k=0;k<26;k++) s += `<circle class="mote" style="animation-delay:${(seeded(k+80)*3.2).toFixed(2)}s" cx="${140+seeded(k+90)*520}" cy="${60+seeded(k+100)*180}" r="${(1+seeded(k+110)*1.6).toFixed(1)}" fill="#fff6dc"/>`;
+  if (g.spot){
+    s += `<polygon class="spotb" points="0,30 22,18 470,250 360,250" fill="url(#spG)"/><polygon class="spotb" points="800,30 778,18 330,250 440,250" fill="url(#spG)"/>`;
+  }
+  s += `<polygon points="90,248 710,248 770,298 30,298" fill="url(#flG)"/><rect x="30" y="298" width="740" height="10" fill="#24170f"/>`;
+  for (let x=120;x<700;x+=60) s += `<path d="M${x} 248 L${x-12+((x-400)/8)} 298" stroke="#2f2015" stroke-width="1.5"/>`;
+  if (g.fog) s += `<g class="haze" filter="url(#blur)" opacity="${mode==='show'?.55:.3}"><ellipse cx="220" cy="252" rx="160" ry="22" fill="#cfd6e6"/><ellipse cx="560" cy="250" rx="170" ry="20" fill="#cfd6e6"/><ellipse cx="400" cy="262" rx="220" ry="16" fill="#cfd6e6"/></g>`;
+  // speakers
+  const spk = (x,y,w,h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#15171f" stroke="#3a3f4f" stroke-width="2"/><circle cx="${x+w/2}" cy="${y+h*.62}" r="${w*.3}" fill="#0a0b10" stroke="#4a5063" stroke-width="2"/><circle cx="${x+w/2}" cy="${y+h*.22}" r="${w*.1}" fill="#0a0b10" stroke="#4a5063" stroke-width="1.5"/>`;
+  if (g.speakers) s += spk(96,140,64,56) + spk(96,194,64,56) + spk(640,140,64,56) + spk(640,194,64,56);
+  else s += `<path d="M150 250v-40M650 250v-40" stroke="#4a5063" stroke-width="4"/>` + spk(128,168,44,44) + spk(628,168,44,44);
+  // mics
+  [340,400,460].forEach(x => { s += `<path d="M${x} 250v-62" stroke="#8a8f9e" stroke-width="3"/><path d="M${x-12} 250h24" stroke="#8a8f9e" stroke-width="3"/><rect x="${x-4}" y="178" width="8" height="14" rx="4" fill="#c9ccd5"/>`; });
+  // crowd
+  s += `<g class="crowd">`;
+  for (let i=0;i<crowd;i++){
+    const x = 20 + seeded(i+1)*760, row = i % 3, y = 334 + row*9 + seeded(i+7)*4, r = 11 + seeded(i+3)*3;
+    s += `<g style="animation-delay:${(seeded(i+11)*.5).toFixed(2)}s"><ellipse cx="${x}" cy="${y+18}" rx="${r*1.6}" ry="${r}" fill="#06070c"/><circle cx="${x}" cy="${y}" r="${r}" fill="#06070c"/></g>`;
+  }
+  s += `</g>`;
+  if (g.board) s += `<g><rect x="330" y="318" width="140" height="26" rx="3" fill="#1d2130" stroke="#4a5063" stroke-width="2"/>${[...Array(10)].map((_,i)=>`<path d="M${342+i*12} 323v14" stroke="#6b7184" stroke-width="2"/><rect x="${339+i*12}" y="${325+(i*5)%9}" width="6" height="4" fill="${mode==='show'?'#86d394':'#9aa0b3'}"/>`).join('')}</g>`;
+  return s + `</svg>`;
+}
+function icon(id){
+  const w = (inner) => `<svg viewBox="0 0 160 80" width="100%" aria-hidden="true">${inner}</svg>`;
+  const spk = (x,y,ww,h) => `<rect x="${x}" y="${y}" width="${ww}" height="${h}" rx="4" fill="#1b1e29" stroke="#4a5063" stroke-width="2"/><circle cx="${x+ww/2}" cy="${y+h*.62}" r="${ww*.3}" fill="#0a0b10" stroke="#6b7184" stroke-width="2"/>`;
+  switch(id){
+    case 'speakers': return w(spk(46,8,32,30)+spk(46,40,32,32)+spk(84,8,32,30)+spk(84,40,32,32));
+    case 'fog': return w(`<rect x="28" y="44" width="40" height="24" rx="4" fill="#2b2f3b" stroke="#6b7184" stroke-width="2"/><ellipse cx="96" cy="50" rx="40" ry="14" fill="#cfd6e6" opacity=".5"/><ellipse cx="118" cy="40" rx="30" ry="10" fill="#cfd6e6" opacity=".3"/>`);
+    case 'lights': return w(`<rect x="16" y="10" width="128" height="6" fill="#7d8291"/>${[34,62,90,118].map((x,i)=>`<polygon points="${x-4},20 ${x+4},20 ${x+18},76 ${x-18},76" fill="${['#f0b44c','#6cc7d9','#e07a5f','#f0b44c'][i]}" opacity=".45"/><rect x="${x-6}" y="14" width="12" height="9" rx="2" fill="#2b2f3b"/>`).join('')}`);
+    case 'spot': return w(`<polygon points="6,10 16,4 100,76 70,76" fill="#e9f3ff" opacity=".35"/><polygon points="154,10 144,4 60,76 90,76" fill="#e9f3ff" opacity=".35"/>`);
+    case 'board': return w(`<rect x="24" y="22" width="112" height="40" rx="4" fill="#1d2130" stroke="#6b7184" stroke-width="2"/>${[...Array(9)].map((_,i)=>`<path d="M${36+i*11} 30v24" stroke="#6b7184" stroke-width="2"/><rect x="${33+i*11}" y="${34+(i*7)%14}" width="6" height="5" fill="#86d394"/>`).join('')}`);
+    case 'led': { let c=''; for(let r=0;r<3;r++) for(let k=0;k<7;k++) c+=`<rect x="${30+k*15}" y="${14+r*17}" width="13" height="15" rx="2" fill="hsl(${(k*30+r*40)%360} 70% 55%)"/>`; return w(`<rect x="24" y="8" width="112" height="62" rx="3" fill="#090b14"/>`+c); }
+    case 'bus': return w(`<rect x="18" y="20" width="124" height="40" rx="8" fill="#c9a24a"/><rect x="18" y="20" width="124" height="10" rx="5" fill="#2b2f3b"/>${[30,52,74,96].map(x=>`<rect x="${x}" y="33" width="16" height="12" rx="2" fill="#1d2130"/>`).join('')}<rect x="118" y="33" width="18" height="20" rx="2" fill="#1d2130"/><circle cx="44" cy="62" r="9" fill="#111"/><circle cx="116" cy="62" r="9" fill="#111"/>`);
+    case 'gig': return w(`<rect x="44" y="10" width="72" height="62" rx="6" fill="#2b2f3b"/><rect x="66" y="4" width="28" height="12" rx="3" fill="#6b7184"/>${[26,40,54].map(y=>`<path d="M56 ${y}h48" stroke="#9aa0b3" stroke-width="3"/>`).join('')}`);
+    case 'think': return w(`<circle cx="80" cy="34" r="22" fill="#f0b44c"/><rect x="70" y="56" width="20" height="12" rx="3" fill="#9aa0b3"/><path d="M74 34l4 6 8-12" stroke="#1d1606" stroke-width="4" fill="none" stroke-linecap="round"/>`);
+    case 'show': return w(`<polygon points="76,4 84,4 120,64 40,64" fill="#f0b44c" opacity=".5"/><rect x="20" y="64" width="120" height="8" fill="#6b4a2f"/>${[30,50,70,90,110,130].map(x=>`<circle cx="${x}" cy="74" r="6" fill="#06070c"/>`).join('')}`);
+  }
+  return '';
+}
+function gearIcon(id){
+  const w = inner => `<svg viewBox="0 0 160 80" width="100%" aria-hidden="true">${inner}</svg>`;
+  if (id === 'mic') return w(`<rect x="72" y="10" width="16" height="30" rx="8" fill="#c9ccd5"/><path d="M80 40v26M66 66h28" stroke="#8a8f9e" stroke-width="4"/><path d="M98 18a20 20 0 0 1 0 16M106 12a30 30 0 0 1 0 28" stroke="#f0b44c" stroke-width="3" fill="none" stroke-linecap="round"/>`);
+  if (id === 'jackets') return w(`<path d="M56 18l14-6h20l14 6 12 22-12 6-4-8v34H60V38l-4 8-12-6z" fill="#2b2f3b" stroke="#6b7184" stroke-width="2"/><rect x="66" y="36" width="28" height="8" rx="2" fill="#f0b44c"/>`);
+  if (id === 'van') return w(`<path d="M24 26h70l22 14v20H24z" fill="#e8e4d8"/><rect x="96" y="30" width="16" height="10" rx="2" fill="#1d2130"/><rect x="34" y="34" width="44" height="8" fill="#f0b44c"/><circle cx="46" cy="62" r="9" fill="#111"/><circle cx="102" cy="62" r="9" fill="#111"/>`);
+  return icon(id);
+}
+
+/* ===== gear, trophies, missions ===== */
+const GEAR = [
+  {id:'mic',      name:'Wireless microphone', price:120, bonus:5,  note:'No more tripping over cords.'},
+  {id:'jackets',  name:'Crew jackets',        price:180, bonus:5,  note:'Your company name on every back.'},
+  {id:'speakers', name:'Tall speakers',       price:260, bonus:5,  note:'Big sound for big rooms.'},
+  {id:'fog',      name:'Fog machine',         price:350, bonus:5,  note:'A light haze that makes beams glow.'},
+  {id:'lights',   name:'Stage lights',        price:500, bonus:10, note:'A lighting rig over the stage.'},
+  {id:'spot',     name:'Spotlights',          price:700, bonus:5,  note:'Two sweeping beams.'},
+  {id:'board',    name:'Mixing board',        price:900, bonus:10, note:'Every mic on one desk.'},
+  {id:'van',      name:'Second van',          price:1200, bonus:10, note:'Two jobs in one night.'},
+  {id:'led',      name:'LED video wall',      price:1500, bonus:10, note:'A glowing screen behind the stage.'},
+  {id:'bus',      name:'Tour bus',            price:2400, bonus:15, note:'Take the show on the road.'}
+];
+const gearBonus = () => GEAR.reduce((a,g) => a + (S.gear[g.id] ? g.bonus : 0), 0);
+const BADGES = [
+  {id:'first', name:'First sale', how:'Solve your first challenge'},
+  {id:'c3', name:'On a roll', how:'Get a combo of 3'},
+  {id:'c5', name:'On fire', how:'Get a combo of 5'},
+  {id:'c10', name:'Unstoppable', how:'Get a combo of 10'},
+  {id:'team5', name:'Teamwork', how:'Solve 5 with Dovid'},
+  {id:'s25', name:'25 solved', how:'Solve 25 challenges'},
+  {id:'s100', name:'Hundred club', how:'Solve 100 challenges'},
+  {id:'shift1', name:'Opening night', how:'Finish your first shift'},
+  {id:'shift10', name:'Seasoned crew', how:'Finish 10 shifts'},
+  {id:'gear1', name:'First upgrade', how:'Buy your first gear'},
+  {id:'lvl5', name:'Rising star', how:'Reach company level 5'},
+  {id:'lvl10', name:'Big time', how:'Reach company level 10'},
+  {id:'days3', name:'Three days running', how:'Play 3 school days in a row'},
+  {id:'student', name:'Good student', how:'Watch 3 lesson videos'},
+  {id:'master', name:'Skill master', how:'Get 4 stars in any skill'},
+  {id:'divpro', name:'Division pro', how:'Show you understand division'},
+  {id:'found', name:'Strong foundation', how:'Finish division, fractions and decimals'}
+];
+const MISSION_POOL = [
+  {id:'solve6', text:'Solve 6 challenges', goal:6, ev:'solve'},
+  {id:'combo4', text:'Reach a combo of 4', goal:4, ev:'combo'},
+  {id:'solo3',  text:'Solve 3 on your own', goal:3, ev:'solo'},
+  {id:'shift',  text:'Finish a shift', goal:1, ev:'shift'},
+  {id:'lesson', text:'Watch a lesson video', goal:1, ev:'lesson'},
+  {id:'team2',  text:'Solve 2 with Dovid’s help', goal:2, ev:'team'},
+  {id:'pad',    text:'Use the scratch pad', goal:1, ev:'pad'}
+];
+const PACES = {quick:{name:'Quick', note:'8 fast ones', n:8}, steady:{name:'Steady', note:'5 at your pace', n:5}, guided:{name:'With Dovid', note:'4, step by step', n:4}};
+
+/* ===== state ===== */
+function newState(company){
+  const skills = {}; SKILLS.forEach(s => skills[s.id] = {m:0, ease:0});
+  return {v:3, math7:true, found:true, open:{div:true}, company, cash:50, xp:0, level:1, gear:{}, skills, pace:'steady', shift:null,
+    stats:{solved:0, solo:0, team:0, shifts:0, best:0, lessons:0}, badges:{}, history:[], days:{last:null, streak:0},
+    missions:null, seen:{lessons:{}, tools:false}, started:Date.now()};
+}
+const xpNeed = L => 50 + 25*(L-1);
+const tierOf = id => Math.min(4, Math.floor(S.skills[id].m/100) + 1);
+const ORDER = SKILLS.map(s => s.id);
+const soloOf = id => (S.skills[id].rec || []).slice(-8).filter(Boolean).length;
+// "understood" = reached the top level (3 stars) AND solved at least 6 of the last 8 on his own, without Dovid
+const understood = id => S.skills[id].m >= 300 && (S.skills[id].rec || []).length >= 8 && soloOf(id) >= 6;
+const isOpen = id => ORDER.indexOf(id) === 0 || !!(S.open && S.open[id]);
+const unlocked = () => SKILLS.filter(s => isOpen(s.id));
+const nextAfter = id => SK(ORDER[ORDER.indexOf(id)+1]);
+const frontier = () => [...unlocked()].pop();
+function checkUnlocks(){
+  let gained = null;
+  ORDER.forEach((id, i) => { const nx = ORDER[i+1]; if (nx && isOpen(id) && !isOpen(nx) && understood(id)){ S.open[nx] = true; gained = SK(nx); report('unlock', {skill:nx, after:id}); if (id === 'div') award('divpro'); if (id === 'dec') award('found'); } });
+  return gained;
+}
+
+/* ===== effects layer: coins, sparks, confetti, light sweeps ===== */
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FX = (() => {
+  let cv, ctx, dpr = 1, parts = [], raf = 0;
+  const COLS = ['#f0b44c','#6cc7d9','#ff8a4c','#86d394','#fff8ea','#e07a5f'];
+  function size(){ if (!cv) return; dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; }
+  function init(){ cv = $('#fx'); if (!cv) return; ctx = cv.getContext('2d'); size(); addEventListener('resize', size); }
+  function loop(){
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,innerWidth,innerHeight);
+    parts = parts.filter(p => p.step(ctx));
+    raf = parts.length ? requestAnimationFrame(loop) : 0;
+    if (!raf) ctx.clearRect(0,0,innerWidth,innerHeight);
+  }
+  const add = p => { if (!ctx) return; parts.push(p); if (!raf) raf = requestAnimationFrame(loop); };
+  const center = el => { const r = el.getBoundingClientRect(); return {x:r.left + r.width/2, y:r.top + r.height/2}; };
+  function coin(ctx, x, y, s, spin){
+    const w = Math.max(2, Math.abs(Math.cos(spin))*s);
+    ctx.save(); ctx.translate(x, y);
+    const g = ctx.createRadialGradient(-s*.3,-s*.3,1,0,0,s); g.addColorStop(0,'#fff1c4'); g.addColorStop(.45,'#f0b44c'); g.addColorStop(1,'#a76a08');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0,0,w,s,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(120,70,0,.55)'; ctx.lineWidth = 1.2; ctx.stroke();
+    if (w > s*.5){ ctx.fillStyle = 'rgba(110,62,0,.8)'; ctx.font = `700 ${s*1.2}px Barlow,sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('$', 0, 1); }
+    ctx.restore();
+  }
+  return {
+    init,
+    // coins fly from one element to another along a curve; onArrive fires once, when the last lands
+    coins(fromEl, toEl, n, onArrive){
+      if (reduceMotion() || !fromEl || !toEl || !ctx){ onArrive && onArrive(); return; }
+      const a = center(fromEl), b = center(toEl); let left = n;
+      for (let i=0;i<n;i++){
+        const sx = a.x + (Math.random()-.5)*120, sy = a.y + (Math.random()-.5)*50;
+        const cx = (sx + b.x)/2 + (Math.random()-.5)*260, cy = Math.min(sy, b.y) - 120 - Math.random()*140;
+        const delay = i*55, dur = 700 + Math.random()*250, t0 = performance.now() + delay, s = 8 + Math.random()*4, sp = Math.random()*6;
+        add({step(c){
+          const t = (performance.now() - t0)/dur; if (t < 0) return true;
+          const k = Math.min(1, t), e = k*k*(3-2*k), u = 1-e;
+          const x = u*u*sx + 2*u*e*cx + e*e*b.x, y = u*u*sy + 2*u*e*cy + e*e*b.y;
+          coin(c, x, y, s*(1 - .35*e), sp + k*14);
+          if (k >= 1){ if (--left === 0 && onArrive) onArrive(); return false; }
+          return true;
+        }});
+      }
+    },
+    // glowing burst of sparks around a point or element
+    burst(at, n = 26, cols = COLS){
+      if (reduceMotion() || !ctx) return;
+      const p0 = at.nodeType ? center(at) : at;
+      for (let i=0;i<n;i++){
+        const ang = Math.random()*Math.PI*2, v = 2 + Math.random()*5, col = cols[i % cols.length];
+        let x = p0.x, y = p0.y, vx = Math.cos(ang)*v, vy = Math.sin(ang)*v, life = 1;
+        add({step(c){
+          x += vx; y += vy; vx *= .94; vy = vy*.94 + .08; life -= .022;
+          if (life <= 0) return false;
+          c.globalCompositeOperation = 'lighter'; c.globalAlpha = life;
+          c.fillStyle = col; c.beginPath(); c.arc(x, y, 2.6*life + .8, 0, Math.PI*2); c.fill();
+          c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; return true;
+        }});
+      }
+    },
+    // confetti from the top of the screen
+    confetti(n = 90){
+      if (reduceMotion() || !ctx) return;
+      for (let i=0;i<n;i++){
+        let x = Math.random()*innerWidth, y = -20 - Math.random()*innerHeight*.5, vx = (Math.random()-.5)*2.4, vy = 2 + Math.random()*3;
+        let r = Math.random()*6, vr = (Math.random()-.5)*.3, w = 6 + Math.random()*6, h = 3 + Math.random()*5, col = COLS[i % COLS.length], sw = Math.random()*6;
+        add({step(c){
+          x += vx + Math.sin((y + sw*40)/40)*.8; y += vy; r += vr;
+          if (y > innerHeight + 20) return false;
+          c.save(); c.translate(x, y); c.rotate(r); c.scale(1, Math.cos(r*2)); c.fillStyle = col; c.fillRect(-w/2,-h/2,w,h); c.restore(); return true;
+        }});
+      }
+    },
+    // stage lights sweeping across the whole screen
+    lights(ms = 1900){
+      if (reduceMotion() || !ctx) return;
+      const t0 = performance.now(), cols = ['240,180,76','108,199,217','255,138,76','134,211,148'];
+      add({step(c){
+        const t = (performance.now() - t0)/ms; if (t >= 1) return false;
+        const fade = Math.sin(Math.PI*t), W = innerWidth, H = innerHeight;
+        c.globalCompositeOperation = 'lighter';
+        cols.forEach((col, i) => {
+          const ox = W*(i+.5)/cols.length, ang = Math.sin(t*Math.PI*2 + i*1.7)*.55, len = H*1.3;
+          const tx = ox + Math.sin(ang)*len, ty = Math.cos(ang)*len, spread = 140;
+          const g = c.createLinearGradient(ox, 0, tx, ty); g.addColorStop(0, `rgba(${col},${.26*fade})`); g.addColorStop(1, `rgba(${col},0)`);
+          c.fillStyle = g; c.beginPath(); c.moveTo(ox-6, -4); c.lineTo(ox+6, -4);
+          c.lineTo(tx + Math.cos(ang)*spread, ty - Math.sin(ang)*spread); c.lineTo(tx - Math.cos(ang)*spread, ty + Math.sin(ang)*spread); c.closePath(); c.fill();
+        });
+        c.globalCompositeOperation = 'source-over'; return true;
+      }});
+    }
+  };
+})();
+
+/* ===== rewards ===== */
+function floatAt(el, text, color){
+  const r = (el || document.body).getBoundingClientRect(), f = document.createElement('div');
+  f.className = 'float'; f.textContent = text; if (color) f.style.color = color;
+  f.style.left = (r.left + r.width/2) + 'px'; f.style.top = (r.top - 6) + 'px';
+  document.body.appendChild(f); setTimeout(() => f.remove(), 1400);
+}
+let bannerT;
+function banner(big, small){
+  const b = $('#banner'); b.innerHTML = `<b>${big}</b><span>${small || ''}</span>`;
+  b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+  clearTimeout(bannerT); bannerT = setTimeout(() => b.classList.remove('on'), 2100);
+}
+function toast(t){ const el = $('#toast'); el.innerHTML = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2800); }
+function addCash(n){ S.cash = r2(S.cash + n); if (S.shift) S.shift.earned = r2(S.shift.earned + n); }
+function addXP(n){
+  S.xp += n; if (S.shift) S.shift.xp += n;
+  while (S.xp >= xpNeed(S.level)){
+    S.xp -= xpNeed(S.level); S.level++;
+    setTimeout(() => { banner(`Level ${S.level}`, 'Your company is growing'); FX.lights(2200); FX.confetti(120); }, 900);
+    if (S.shift) S.shift.levels.push(S.level);
+    if (S.level >= 5) award('lvl5'); if (S.level >= 10) award('lvl10');
+  }
+  header();
+}
+function award(id){
+  if (S.badges[id]) return; S.badges[id] = Date.now();
+  const b = BADGES.find(x => x.id === id); addCash(25);
+  setTimeout(() => { toast(`Trophy earned: <b>${b.name}</b> (+$25)`); FX.burst({x:innerWidth/2, y:innerHeight-40}, 30); }, 1500);
+}
+function playDay(){
+  const t = todayStr(), d = S.days;
+  if (d.last === t) return;
+  let next = 1;
+  if (d.last){
+    const a = new Date(d.last + 'T12:00'), b = new Date(t + 'T12:00'), gap = Math.round((b - a)/864e5);
+    const skipsShabbos = gap === 2 && new Date(a.getTime() + 864e5).getDay() === 6;
+    if (gap === 1 || skipsShabbos) next = d.streak + 1;
+  }
+  d.last = t; d.streak = next;
+  if (next >= 2){ const bonus = Math.min(100, next*10); addCash(bonus); setTimeout(() => { banner(`${next} days in a row`, `Day bonus: +$${bonus}`); FX.burst($('#banner'), 40); }, 400); }
+  if (next >= 3) award('days3');
+}
+function ensureMissions(){
+  const t = todayStr();
+  if (S.missions && S.missions.date === t) return;
+  const pool = [...MISSION_POOL].sort(() => Math.random() - .5).slice(0,3);
+  S.missions = {date:t, chest:false, list:pool.map(m => ({id:m.id, prog:0, done:false}))};
+}
+function mission(ev, val = 1){
+  ensureMissions();
+  S.missions.list.forEach(m => {
+    const def = MISSION_POOL.find(x => x.id === m.id); if (m.done || def.ev !== ev) return;
+    m.prog = ev === 'combo' ? Math.max(m.prog, val) : m.prog + val;
+    if (m.prog >= def.goal){ m.done = true; addCash(50); addXP(20); setTimeout(() => toast(`Mission complete: <b>${def.text}</b> (+$50)`), 700); }
+  });
+  if (!S.missions.chest && S.missions.list.every(m => m.done)){ S.missions.chest = true; addCash(100); setTimeout(() => { banner('Daily chest', 'All 3 missions done: +$100'); FX.confetti(110); }, 1800); }
+}
+
+/* ===== header ===== */
+let shownCash = null, cashHold = false;
+function tweenCash(to){
+  const el = $('#cash'); if (!el) return;
+  if (shownCash === null || reduceMotion() || shownCash === to){ shownCash = to; el.textContent = money(to); return; }
+  const from = shownCash, t0 = performance.now(), dur = 700; shownCash = to;
+  const f = t => { if (shownCash !== to) return; const k = Math.min(1, (t - t0)/dur), e = 1 - Math.pow(1-k, 3); el.textContent = money(Math.round(from + (to-from)*e)); if (k < 1) requestAnimationFrame(f); else el.textContent = money(to); };
+  requestAnimationFrame(f);
+}
+function bumpEl(el){ if (!el) return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+function header(){
+  if (!S) return;
+  $('#coName').textContent = S.company;
+  if (!cashHold) tweenCash(S.cash);
+  $('#lvl').textContent = `Level ${S.level}`;
+  $('#xpbar').style.width = Math.round(S.xp/xpNeed(S.level)*100) + '%';
+  $('#days').textContent = S.days.streak || 0;
+}
+
+/* ===== hub ===== */
+function ring(pct, label){
+  const r = 36, c = 2*Math.PI*r;
+  return `<svg class="ring" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--panel2)" stroke-width="8"/><circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--amber)" stroke-width="8" stroke-linecap="round" class="arc" stroke-dasharray="${c*pct} ${c}" transform="rotate(-90 42 42)"/><text x="42" y="50" text-anchor="middle" font-size="26" font-weight="800" fill="var(--text)" font-family="Barlow,sans-serif">${label}</text></svg>`;
+}
+function chartSVG(){
+  const h = S.history.slice(-10);
+  if (!h.length) return `<p class="muted" style="margin:20px 0">Finish a shift and your earnings show up here.</p>`;
+  const mx = Math.max(...h.map(x => x.earned), 1), w = 400, H = 130, bw = w/10;
+  return `<svg viewBox="0 0 ${w} ${H+22}" aria-label="Earnings for your last ${h.length} shifts">${h.map((x,i) => { const bh = Math.max(4, x.earned/mx*H); return `<rect style="animation-delay:${(.15+i*.06).toFixed(2)}s" x="${i*bw+6}" y="${H-bh}" width="${bw-12}" height="${bh}" rx="4" fill="var(--amber)" opacity="${.45 + .55*(i+1)/h.length}"/><text x="${i*bw+bw/2}" y="${H+16}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="Barlow,sans-serif">$${Math.round(x.earned)}</text>`; }).join('')}</svg>`;
+}
+function renderHub(){
+  header(); ensureMissions(); closePad();
+  const L = S.level, cur = frontier(), nx = nextAfter(cur.id), solo = soloOf(cur.id), stars3 = S.skills[cur.id].m >= 300;
+  const mis = S.missions.list.map(m => { const d = MISSION_POOL.find(x => x.id === m.id);
+    return `<div class="mis ${m.done?'done':''}"><span class="ck">${m.done?'✓':''}</span><span>${d.text}</span><small>${Math.min(m.prog,d.goal)}/${d.goal}</small></div>`; }).join('');
+  const value = S.cash + GEAR.reduce((a,g) => a + (S.gear[g.id] ? g.price : 0), 0);
+  $('#view').innerHTML = `
+  <div class="hero">
+    <div class="stage boot">${stageSVG({gear:S.gear, crowd:Math.min(56, 8 + L*4), mode:'idle'})}</div>
+    <div class="card">
+      <h2 class="disp">${S.shift ? 'Shift in progress' : 'Ready for a shift?'}</h2>
+      <p class="muted">${S.shift ? `${esc(S.shift.ev.t)}: challenge ${S.shift.i+1} of ${S.shift.n}.` : 'Pick how you want to work today.'}</p>
+      ${S.shift ? '' : `<div class="seg" role="group" aria-label="Pace">${Object.entries(PACES).map(([k,p]) => `<button data-pace="${k}" aria-pressed="${S.pace===k}"><b>${p.name}</b><small>${p.note}</small></button>`).join('')}</div>`}
+      <button class="btn big" id="bGo" style="width:100%">${S.shift ? 'Back to my shift' : 'Start a shift'}</button>
+      <div class="missions"><b>Today’s missions</b>${mis}${S.missions.chest ? '<small class="muted">Daily chest opened. New missions tomorrow.</small>' : '<small class="muted">Finish all three to open the daily chest (+$100).</small>'}</div>
+    </div>
+  </div>
+
+  <h3 class="sec">Your progress</h3>
+  <div class="prog3">
+    <div class="card"><div class="bigl">${ring(S.xp/xpNeed(L), L)}<div><b style="font-size:20px">Company level ${L}</b><p class="muted" style="margin:2px 0 0">${xpNeed(L)-S.xp} points to level ${L+1}.</p></div></div>
+      <div class="goal"><b>Now learning: ${cur.name}</b>${nx ? `<p class="muted">To unlock <b>${nx.name}</b>:</p>
+        <div class="gl ${stars3?'ok':''}"><span>${stars3?'✓':'★'}</span>Reach 3 stars</div>
+        <div class="gl ${solo>=6?'ok':''}"><span>${solo>=6?'✓':solo}</span>Solve 6 of your last 8 on your own (${solo} of 8 now)</div>` : '<p class="muted">Every skill is unlocked. Keep collecting stars.</p>'}</div></div>
+    <div class="card chart"><b>Money earned, last shifts</b>${chartSVG()}</div>
+    <div class="card"><div class="stats">
+      <div><b>${S.stats.solved}</b><small>Challenges solved</small></div>
+      <div><b>${S.stats.best}</b><small>Best combo</small></div>
+      <div><b>${money(value)}</b><small>Company value</small></div>
+      <div><b>${S.days.streak || 0}</b><small>Days in a row</small></div></div></div>
+  </div>
+
+  <h3 class="sec">Your skills</h3>
+  <div class="skills">${SKILLS.map((s, si) => { const open = isOpen(s.id), t = tierOf(s.id), m = S.skills[s.id].m, prev = SKILLS[si-1];
+    return `<div class="skill ${open?'':'lock'}"><div class="hd"><div class="ic" style="color:var(--amber)">${ICO[s.icon]}</div><div><b>${s.name}</b><br><small>${s.math}</small></div></div>
+      ${open ? `<div class="stars" aria-label="${t} of 4 stars">${[1,2,3,4].map(i => `<span class="${i<=t?'':'off'}">★</span>`).join('')}</div>
+      <div class="bar good"><i style="width:${m >= 400 ? 100 : m % 100}%"></i></div><small>${m >= 400 ? 'Mastered!' : `${m % 100}% of the way to the next star`}</small>
+      <div class="acts"><button class="btn" data-practice="${s.id}">Practice</button><button class="btn line" data-lesson="${s.id}">Watch how</button></div>`
+      : `<small>Unlocks when you understand <b>${prev ? prev.name : ''}</b></small>`}${s.found ? '<span class="tag">Foundation</span>' : ''}${open && understood(s.id) ? '<span class="tag ok">Understood</span>' : ''}</div>`; }).join('')}</div>
+
+  <h3 class="sec">Trophies</h3>
+  <div class="trophies">${BADGES.map(b => `<div class="tro ${S.badges[b.id]?'':'off'}">${ICO.trophy}<b>${b.name}</b><small>${b.how}</small></div>`).join('')}</div>
+
+  <h3 class="sec">Gear shop</h3>
+  <p class="muted" style="margin-top:-6px">Every piece of gear makes every job pay more. You earn ${gearBonus()}% extra right now.</p>
+  <div class="shop">${GEAR.map(g => { const own = S.gear[g.id];
+    return `<div class="item"><div class="ic">${gearIcon(g.id)}</div><b>${g.name}</b><small>${g.note}</small><span class="boost">+${g.bonus}% pay</span>
+      ${own ? '<span class="owned">Yours</span>' : `<button class="btn" data-buy="${g.id}" ${S.cash<g.price?'disabled':''}>${S.cash>=g.price ? 'Buy for '+money(g.price) : 'Need '+money(g.price-S.cash)+' more'}</button>`}</div>`; }).join('')}</div>`;
+  $('#bGo').onclick = () => S.shift ? renderChal() : startShift('mixed');
+}
+function buy(id){
+  const g = GEAR.find(x => x.id === id);
+  if (!g || S.gear[id] || S.cash < g.price) return;
+  S.cash = r2(S.cash - g.price); S.gear[id] = true; award('gear1'); save();
+  report('buy', {item:g.name, price:g.price});
+  renderHub(); banner(g.name, `Yours! Every job now pays ${gearBonus()}% more.`);
+  FX.confetti(70); const st = $('.stage'); if (st) FX.burst(st, 50);
+}
+
+/* ===== shifts ===== */
+function startShift(mode){
+  const n = PACES[S.pace].n;
+  S.shift = {mode, ev:makeEvent(), n, i:0, list:[], earned:0, xp:0, combo:0, best:0, solo:0, team:0, levels:[], skillUps:[], cur:null};
+  newChallenge(); save();
+  if (!S.seen.tools) return toolsTutorial(0);
+  maybeLesson();
+}
+function chooseSkill(){
+  const sh = S.shift;
+  if (sh.mode !== 'mixed') return sh.mode;
+  // most challenges come from the skill he's learning now; about 1 in 4 reviews an earlier skill
+  const pool = unlocked(), now = frontier().id, review = pool.filter(s => s.id !== now);
+  if (!review.length || Math.random() < .75) return now;
+  return pick(review).id;
+}
+function newChallenge(){
+  const sk = chooseSkill(), base = tierOf(sk), t = Math.max(1, base - (S.skills[sk].ease >= 2 ? 1 : 0));
+  const c = GEN[sk](t, S.shift.ev);
+  Object.assign(c, {skill:sk, tier:t, id:Date.now() + '' + Math.random()});
+  S.shift.list.push(c);
+  S.shift.cur = {tries:0, guide:S.pace === 'guided' ? {step:0, tries:0, done:[]} : null, solved:false, how:null};
+  enterNext = true;
+}
+let enterNext = false;
+function maybeLesson(){
+  const c = S.shift.list[S.shift.i];
+  if (S.seen.lessons[c.skill] === undefined){
+    S.seen.lessons[c.skill] = 0; save();
+    showModal(`<div class="tut"><div class="tic" style="color:var(--amber)">${ICO[SK(c.skill).icon]}</div><div><p class="muted" style="margin:0">New skill</p><h2 class="disp">${SK(c.skill).name}</h2><p>This one is about <b>${SK(c.skill).math.toLowerCase()}</b>. Dovid made a short video that shows you exactly how to do it.</p></div></div>
+      <div class="acts"><button class="btn line" id="bSkipL">Skip for now</button><button class="btn big" id="bWatch">Watch the video</button></div>`);
+    $('#bSkipL').onclick = () => { closeModal(); renderChal(); };
+    $('#bWatch').onclick = () => playLesson(c.skill, () => renderChal());
+    return;
+  }
+  renderChal();
+}
+const TOOLS_TUT = [
+  {ic:'help', h:'Stuck? Dovid holds your hand', p:'Tap <b>Help me, Dovid</b> any time. He breaks the problem into tiny steps and does them with you. You still get paid, and your combo keeps going.'},
+  {ic:'play', h:'Watch how', p:'Every skill has a short video that shows you exactly how to do it. Watch it as many times as you like.'},
+  {ic:'pencil', h:'Scratch pad', p:'Work it out on the scratch pad. Draw, write numbers, cross things out. It’s your paper.'},
+  {ic:'speak', h:'Read it to me', p:'Tap <b>Read it</b> and the challenge is read out loud.'}
+];
+function toolsTutorial(i){
+  const t = TOOLS_TUT[i];
+  showModal(`<div class="tut"><div class="tic" style="color:var(--amber)">${ICO[t.ic]}</div><div><h2 class="disp" style="font-size:32px">${t.h}</h2><p>${t.p}</p></div></div>
+    <div class="pdots">${TOOLS_TUT.map((_,k) => `<i class="${k===i?'on':''}"></i>`).join('')}</div>
+    <div class="acts">${i>0?'<button class="btn line" id="bPrev">Back</button>':''}<button class="btn big" id="bT">${i < TOOLS_TUT.length-1 ? 'Next' : 'Let’s go'}</button></div>`);
+  if (i > 0) $('#bPrev').onclick = () => toolsTutorial(i-1);
+  $('#bT').onclick = () => { if (i < TOOLS_TUT.length-1) return toolsTutorial(i+1); S.seen.tools = true; save(); closeModal(); maybeLesson(); };
+}
+
+/* ===== challenge screen ===== */
+let activeInput = null;
+const inputHTML = (id, st, small) => `<label class="field ${small?'small':''}">${st.pre?`<span>${st.pre}</span>`:''}<input id="${id}" class="ain" inputmode="none" autocomplete="off" aria-label="Your answer">${st.post?`<span style="font-size:${small?15:18}px;white-space:nowrap">${st.post}</span>`:''}</label>`;
+const KEYS = ['7','8','9','⌫','4','5','6','/','1','2','3','−','0','.','space','Clear'];
+const keypadHTML = () => `<div class="keypad" id="kp">${KEYS.map(k => `<button data-k="${k}" class="${k.length>1&&k!=='⌫'?'wide':''}" aria-label="${k==='⌫'?'Delete':k==='space'?'Space for mixed numbers':k}">${k==='space'?'space':k}</button>`).join('')}</div>`;
+function chalVis(c, cur){
+  if (!c.ld) return c.vis;
+  const n = ldStages(c.ld.N, c.ld.d).length*2;
+  const k = cur.solved ? n : cur.guide ? Math.max(0, Math.min(n, cur.guide.step - c.ld.off)) : 0;
+  return visLong(c.ld.N, c.ld.d, k);
+}
+function renderChal(){
+  header();
+  const sh = S.shift, c = sh.list[sh.i], cur = sh.cur, sk = SK(c.skill);
+  const comboHot = sh.combo >= 3, mult = comboMult(sh.combo);
+  const answerArea = c.kind === 'choice'
+    ? `<div class="choices">${c.choices.map((x,i) => `<button class="btn line" data-pick="${i}" ${cur.solved?'disabled':''}>${x}</button>`).join('')}</div>`
+    : `${inputHTML('ans', c)}${c.frac?'<p class="muted" style="font-size:14px;margin:6px 0 0">Fractions: type 3/4, or 2 space 1/2 for a mixed number.</p>':''}`;
+  $('#view').innerHTML = `
+    <div class="cbar"><button class="ghost" id="bHQ">Back to HQ</button>
+      <div class="dots" aria-label="Challenge ${sh.i+1} of ${sh.n}">${Array.from({length:sh.n}, (_,i) => `<i class="${i<sh.i?'ok':i===sh.i?'on':''}"></i>`).join('')}</div>
+      <span class="combo ${comboHot?'hot':''}" id="comboPill" title="Combo"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="${comboHot?'var(--flame)':'var(--muted)'}"/></svg>Combo ${sh.combo}${mult>1?` · ×${mult}`:''}</span>
+      <span class="combo" title="Earned this shift">+${money(sh.earned)}</span></div>
+    <div class="chal ${enterNext ? 'enter' : ''}">
+      <div>
+        <p class="muted" style="margin:0 0 6px">${esc(sh.ev.t)} · ${sk.name}</p>
+        <div class="scene"><div class="av">${esc(sh.ev.c.split(' ').pop()[0].toUpperCase())}</div><div class="bubble"><b class="who">${esc(sh.ev.c)}</b><span id="sceneTxt">${c.scene}</span></div></div>
+        <div class="vis" id="visBox">${chalVis(c, cur)}</div>
+      </div>
+      <div>
+        <div class="qcard" id="qcard">
+          <p class="ask" id="askTxt">${c.ask}</p>
+          ${cur.guide ? '' : answerArea}
+          <div class="fb" id="fb" role="status"></div>
+          <div id="guideBox"></div>
+          ${(c.kind === 'choice' && !cur.guide) || cur.solved ? '' : keypadHTML()}
+          ${c.kind !== 'choice' && !cur.guide && !cur.solved ? '<div class="checkrow"><button class="btn big" id="bCheck">Check</button></div>' : ''}
+          <div class="tools">
+            <button class="help" id="tHelp">${ICO.help}Help me, Dovid</button>
+            <button id="tVid">${ICO.play}Watch how</button>
+            <button id="tPad">${ICO.pencil}Scratch pad</button>
+            <button id="tRead">${ICO.speak}Read it</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  enterNext = false;
+  $('#bHQ').onclick = () => { save(); renderHub(); };
+  $('#tHelp').onclick = openGuide; if (cur.guide || cur.solved) $('#tHelp').disabled = true;
+  $('#tVid').onclick = () => playLesson(c.skill, () => {});
+  $('#tPad').onclick = openPad;
+  $('#tRead').onclick = () => speakEls([$('#sceneTxt'), $('#askTxt')]);
+  if (c.kind === 'choice' && !cur.guide) $$('[data-pick]').forEach(b => b.onclick = () => checkMain(+b.dataset.pick));
+  else if (!cur.guide && cur.solved){ const inp = $('#ans'); inp.value = fmtAns(c.ans, c.frac); inp.disabled = true; }
+  else if (!cur.guide){ const inp = $('#ans'); $('#bCheck').onclick = () => checkMain(inp.value); bindInput(inp, () => checkMain(inp.value)); if (!isTouch()) inp.focus(); activeInput = inp; }
+  if (cur.guide) renderGuide();
+  if (cur.solved) showSolved();
+  $('#padQ').innerHTML = `${c.scene} ${c.ask}`;
+}
+const isTouch = () => matchMedia('(pointer:coarse)').matches;
+function bindInput(inp, onEnter){
+  inp.readOnly = false; if (isTouch()) inp.setAttribute('inputmode','none'); else inp.removeAttribute('inputmode');
+  inp.addEventListener('focus', () => activeInput = inp);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') onEnter(); });
+}
+document.addEventListener('mousedown', e => { if (e.target.closest('#kp')) e.preventDefault(); });
+document.addEventListener('click', e => {
+  const k = e.target.closest('#kp button'); if (!k) return;
+  const inp = activeInput && document.body.contains(activeInput) ? activeInput : ($('#gIn') || $('#ans')); if (!inp || inp.disabled) return;
+  const v = k.dataset.k;
+  if (v === '⌫') inp.value = inp.value.slice(0,-1);
+  else if (v === 'Clear') inp.value = '';
+  else if (v === 'space') inp.value += ' ';
+  else if (v === '−') inp.value = inp.value.startsWith('-') ? inp.value.slice(1) : '-' + inp.value;
+  else inp.value += v;
+});
+const comboMult = c => c >= 10 ? 3 : c >= 5 ? 2 : c >= 3 ? 1.5 : 1;
+const isRight = (st, v) => st.kind === 'choice' ? v === st.ans : Math.abs(v - st.ans) < (st.frac ? 0.0005 : 0.005);
+function fb(kind, html){ const f = $('#fb'); f.className = `fb on ${kind}`; f.innerHTML = html; }
+function checkMain(v){
+  const sh = S.shift, c = sh.list[sh.i], cur = sh.cur;
+  if (cur.solved) return;
+  if (c.mixed && /^\s*\d+\s*\/\s*\d+\s*$/.test(v) && parseNum(v) > 1) return fb('soft', 'Right idea! Now write it as a mixed number, like 3 1/4 (whole number, space, fraction).');
+  if (c.kind !== 'choice'){ v = parseNum(v); if (isNaN(v)) return fb('soft', 'Type your answer with the keypad first.'); }
+  if (isRight(c, v)) return solve(cur.tries === 0 ? 'solo1' : 'solo2');
+  cur.tries++; save();
+  const inp = $('#ans'); if (inp){ inp.value = ''; const f = inp.closest('.field'); f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake'); }
+  if (cur.tries === 1) fb('soft', `<b>Not quite, but you’re close.</b> Try once more, or let Dovid walk you through it.<div class="acts"><button class="btn" id="fbHelp">Help me, Dovid</button></div>`);
+  else { fb('soft', '<b>Let’s do this one together.</b> Dovid will take it step by step.'); const cid = c.id; setTimeout(() => { if (S.shift && S.shift.list[S.shift.i].id === cid) openGuide(); }, 700); }
+  const h = $('#fbHelp'); if (h) h.onclick = openGuide;
+}
+
+/* ===== hand holder ===== */
+function openGuide(){
+  if (!S.shift) return;
+  const cur = S.shift.cur; if (cur.solved) return;
+  if (!cur.guide) cur.guide = {step:0, tries:0, done:[]};
+  save(); renderChal();
+}
+function renderGuide(){
+  const c = S.shift.list[S.shift.i], g = S.shift.cur.guide, steps = c.guide;
+  const box = $('#guideBox');
+  let h = `<div class="guide"><div class="gh"><div class="av dovid">D</div><p><b>Dovid:</b> ${g.step === 0 ? 'No problem. We’ll do it together, one small step at a time.' : g.step >= steps.length ? 'We did it!' : pick(['Nice. Next little step.','You’ve got this.','Good, keep going.','Great. Here’s the next piece.'])}</p></div>`;
+  steps.forEach((st, i) => {
+    if (i < g.step) h += `<div class="gs done"><span class="n">✓</span><div><div class="q">${st.q}</div><div class="a">${st.kind === 'choice' ? st.choices[st.ans] : `${st.pre||''}${fmtAns(st.ans, st.frac)}${st.post && !st.post.startsWith('/') ? ' '+st.post : st.post||''}`}${g.done[i] === 'shown' ? ' <span class="muted" style="font-weight:500">(Dovid filled this in)</span>' : ''}</div></div></div>`;
+    else if (i === g.step) h += `<div class="gs cur"><span class="n">${i+1}</span><div><div class="q">${st.q}</div>${st.kind === 'choice'
+      ? `<div class="choices" style="margin-top:6px">${st.choices.map((x,k) => `<button class="btn line" data-gpick="${k}">${x}</button>`).join('')}</div>`
+      : `<div class="row">${inputHTML('gIn', st, true)}<button class="btn" id="gCheck">Check</button></div>`}<div id="gHint"></div></div></div>`;
+    else h += `<div class="gs later"><span class="n">${i+1}</span><div class="q">${i === steps.length-1 ? 'Last step' : 'Next step'}</div></div>`;
+  });
+  box.innerHTML = h + '</div>';
+  const vb = $('#visBox'); if (vb && c.ld) vb.innerHTML = chalVis(c, S.shift.cur);
+  const st = steps[g.step]; if (!st) return;
+  if (st.kind === 'choice') $$('[data-gpick]').forEach(b => b.onclick = () => checkGuide(+b.dataset.gpick));
+  else { const gi = $('#gIn'); bindInput(gi, () => checkGuide(gi.value)); $('#gCheck').onclick = () => checkGuide(gi.value); activeInput = gi; if (!isTouch()) gi.focus(); }
+}
+const fmtAns = (v, frac) => { if (!frac || Number.isInteger(v)) return fmt(v); const d = Array.from({length:100}, (_,i) => i+2).find(d => Math.abs(v*d - Math.round(v*d)) < 1e-6) || 100; return `${Math.floor(v) ? Math.floor(v)+' ' : ''}${Math.round((v - Math.floor(v))*d)}/${d}`; };
+function checkGuide(v){
+  const c = S.shift.list[S.shift.i], g = S.shift.cur.guide, st = c.guide[g.step];
+  if (g.wait || !st) return;
+  if (st.kind !== 'choice'){ v = parseNum(v); if (isNaN(v)) return; }
+  if (isRight(st, v)){ g.done[g.step] = 'ok'; g.step++; g.tries = 0; floatAt($('#guideBox .gs.cur') || $('#qcard'), '✓', 'var(--good)'); return afterGuideStep(); }
+  g.tries++; save();
+  const hint = $('#gHint');
+  if (g.tries === 1) hint.innerHTML = `<div class="hint">${st.hint ? `<b>Tip:</b> ${st.hint}` : 'Almost. Try that step once more. The scratch pad can help.'}</div>`;
+  else { g.done[g.step] = 'shown'; const show = st.kind === 'choice' ? st.choices[st.ans] : `${st.pre||''}${fmtAns(st.ans, st.frac)}`;
+    hint.innerHTML = `<div class="hint">That’s okay. It’s <b>${show}</b>. Let’s keep going.</div>`;
+    g.wait = true; $$('#gIn, #gCheck, [data-gpick]').forEach(e => e.disabled = true); const cid = c.id;
+    setTimeout(() => { g.wait = false; if (!S.shift || S.shift.list[S.shift.i].id !== cid) return; g.step++; g.tries = 0; afterGuideStep(); }, 1500); }
+  const gi = $('#gIn'); if (gi) gi.value = '';
+}
+function afterGuideStep(){
+  const c = S.shift.list[S.shift.i], g = S.shift.cur.guide;
+  save();
+  if (g.step >= c.guide.length) return solve('team');
+  renderGuide();
+}
+
+/* ===== solving and rewards ===== */
+function solve(how){
+  const sh = S.shift, c = sh.list[sh.i], cur = sh.cur;
+  cashHold = true;
+  cur.solved = true; cur.how = how;
+  sh.combo++; sh.best = Math.max(sh.best, sh.combo); S.stats.best = Math.max(S.stats.best, sh.combo);
+  const base = [20,30,45,60][c.tier-1], mult = comboMult(sh.combo);
+  const coins = Math.round(base * mult * (1 + gearBonus()/100));
+  addCash(coins);
+  const sk = S.skills[c.skill], before = tierOf(c.skill);
+  sk.m = Math.min(400, sk.m + (how === 'solo1' ? 25 : how === 'solo2' ? 18 : 10));
+  sk.ease = how === 'team' ? sk.ease + 1 : 0;
+  sk.rec = [...(sk.rec || []), how !== 'team'].slice(-12);
+  { const A = dayAct(); A.n++; if (how === 'team') A.t++; }
+  S.stats.solved++; if (how === 'team'){ S.stats.team++; sh.team++; } else { S.stats.solo++; sh.solo++; }
+  playDay();
+  addXP(how === 'solo1' ? 15 : how === 'solo2' ? 12 : 10);
+  award('first'); if (S.stats.solved >= 25) award('s25'); if (S.stats.solved >= 100) award('s100'); if (S.stats.team >= 5) award('team5');
+  if (sh.combo >= 3) award('c3'); if (sh.combo >= 5) award('c5'); if (sh.combo >= 10) award('c10');
+  mission('solve'); mission('combo', sh.combo); mission(how === 'team' ? 'team' : 'solo');
+  const after = tierOf(c.skill);
+  if (after > before){ sh.skillUps.push(c.skill); setTimeout(() => banner('★ Skill up', `${SK(c.skill).name}: ${after} stars`), 1200); }
+  if (after === 4 && sk.m >= 400) award('master');
+  const opened = checkUnlocks();
+  if (opened){ setTimeout(() => { banner('New skill unlocked!', `You really understand ${SK(c.skill).name.toLowerCase()}. Next up: ${opened.name}`); FX.lights(2600); FX.confetti(170); }, 1900); }
+  let comboBonus = 0;
+  if ([3,5,10,15,20].includes(sh.combo)){ comboBonus = {3:25, 5:50, 10:150, 15:200, 20:300}[sh.combo]; addCash(comboBonus); banner(`Combo ${sh.combo}!`, `Streak bonus +$${comboBonus}${mult > 1 ? ` · now earning ×${mult}` : ''}`); setTimeout(() => { FX.confetti(sh.combo >= 10 ? 160 : 90); if (sh.combo >= 5) FX.lights(1600); }, 150); }
+  save(); header();
+  report('solve', {skill:c.skill, tier:c.tier, how, coins});
+  renderChal();
+  const qc = $('#qcard');
+  floatAt(qc, `+$${coins}`); qc.classList.add('win'); bumpEl($('#comboPill'));
+  FX.burst(qc, 22 + Math.min(30, sh.combo*3));
+  FX.coins(qc, $('#cashPill'), Math.min(14, 4 + sh.combo), () => { cashHold = false; tweenCash(S.cash); bumpEl($('#cashPill')); });
+}
+const PRAISE = ['Nailed it!','Perfect!','That’s it!','Great work!','You got it!','Exactly right!'];
+function showSolved(){
+  const sh = S.shift, c = sh.list[sh.i], cur = sh.cur;
+  const qc = $('#qcard'); qc.classList.add('flash');
+  $$('#qcard [data-pick], #bCheck, #ans, #kp button, #tHelp').forEach(e => e.disabled = true);
+  const ansTxt = c.kind === 'choice' ? c.choices[c.ans] : `${c.pre||''}${fmtAns(c.ans, c.frac)}${c.post ? ' '+c.post : ''}`;
+  const msg = cur.how === 'team' ? '<b>You and Dovid solved it!</b> Teamwork counts. Your combo keeps going.' : `<b>${PRAISE[(S.stats.solved) % PRAISE.length]}</b>${cur.how === 'solo1' ? ' First try!' : ''}`;
+  const last = sh.i >= sh.n - 1;
+  fb('good', `${msg}<div style="margin-top:4px">The answer: <b>${ansTxt}</b></div><div class="acts"><button class="btn big good" id="bNext">${last ? 'Finish the shift' : 'Next challenge'}</button></div>`);
+  $('#bNext').onclick = nextChal; $('#bNext').focus();
+  if (S.pace === 'quick' && !last) { clearTimeout(showSolved.t); showSolved.t = setTimeout(() => { if ($('#bNext') && S.shift && S.shift.cur.solved) nextChal(); }, 1600); }
+}
+function nextChal(){
+  clearTimeout(showSolved.t);
+  const sh = S.shift; if (!sh) return;
+  clearPad();
+  if (sh.i >= sh.n - 1) return endShift();
+  sh.i++; newChallenge(); save();
+  window.scrollTo({top:0}); maybeLesson();
+}
+function endShift(){
+  const sh = S.shift, pay = Math.round((30 + S.level*10) * (1 + gearBonus()/100));
+  addCash(pay); S.stats.shifts++; award('shift1'); if (S.stats.shifts >= 10) award('shift10');
+  mission('shift');
+  S.history.push({at:Date.now(), earned:sh.earned, solved:sh.n, solo:sh.solo, team:sh.team});
+  report('shift', {event:sh.ev.t, earned:sh.earned, solo:sh.solo, team:sh.team, best:sh.best});
+  const done = sh; S.shift = null; save(); header();
+  const nextGear = GEAR.find(g => !S.gear[g.id]);
+  showModal(`<div class="stage">${stageSVG({gear:S.gear, crowd:Math.min(56, 8 + S.level*4), mode:'show', name:S.company})}</div>
+    <h2 class="disp" style="text-align:center">Show complete!</h2>
+    <p style="text-align:center" class="muted">${esc(done.ev.t)} was a hit.</p>
+    <div class="sum"><div><b>${done.n}</b><small>Challenges solved</small></div><div><b>${done.best}</b><small>Best combo</small></div><div><b>+${done.xp}</b><small>Level points</small></div></div>
+    <div class="pay"><div class="l"><span>Earned during the shift</span><span class="num">+${money(done.earned - pay)}</span></div><div class="l"><span>${esc(done.ev.c)} pays for the show</span><span class="num">+${money(pay)}</span></div>
+      <div class="l tot"><span>Total this shift</span><span class="num" id="earn">$0</span></div></div>
+    ${done.skillUps.length ? `<div class="notice">★ Skill up: ${[...new Set(done.skillUps)].map(s => SK(s).name).join(', ')}</div>` : ''}
+    ${done.levels.length ? `<div class="notice">Your company reached <b>level ${done.levels[done.levels.length-1]}</b>!</div>` : ''}
+    ${nextGear ? `<div class="notice">${S.cash >= nextGear.price ? `You can buy the <b>${nextGear.name.toLowerCase()}</b> now. Check the gear shop!` : `Next gear: <b>${nextGear.name.toLowerCase()}</b>. ${money(nextGear.price - S.cash)} to go.`}</div>` : ''}
+    <div class="acts"><button class="btn line" id="bHQ2">Back to HQ</button><button class="btn big" id="bAgain">Another shift</button></div>`);
+  countUp($('#earn'), done.earned);
+  setTimeout(() => { FX.lights(2400); FX.confetti(140); }, 200);
+  $('#bHQ2').onclick = () => { closeModal(); renderHub(); window.scrollTo({top:0}); };
+  $('#bAgain').onclick = () => { closeModal(); startShift(done.mode); };
+}
+function countUp(el, to){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent = money(to); return; }
+  const t0 = performance.now(), dur = 1200;
+  const f = t => { const k = Math.min(1, (t - t0)/dur), e = 1 - Math.pow(1-k, 3); el.textContent = money(Math.round(to*e)); if (k < 1) requestAnimationFrame(f); else el.textContent = money(to); };
+  requestAnimationFrame(f);
+}
+
+/* ===== Khan Academy videos (taught by Sal Khan) ===== */
+const KHAN = {
+  div:[{t:'The idea of division', u:'https://www.khanacademy.org/math/arithmetic-home/multiply-divide/division-intro/v/the-idea-of-division'},
+       {t:'Intro to long division (remainders)', u:'https://www.khanacademy.org/math/arithmetic/multiplication-division/long-division/v/division-2'},
+       {t:'Long division with remainders: 2292 ÷ 4', u:'https://www.khanacademy.org/math/cc-fifth-grade-math/multi-digit-multiplication-and-division/imp-multi-digit-division-2/v/division-3-more-long-division-and-remainder-examples'}],
+  frb:[{t:'Writing improper fractions as mixed numbers', u:'https://www.khanacademy.org/math/pre-algebra/pre-algebra-fractions/pre-algebra-mixed-number/v/changing-an-improper-fraction-to-a-mixed-number', m:'4 min'},
+       {t:'Adding fractions with unlike denominators', u:'https://www.khanacademy.org/math/arithmetic/fraction-arithmetic/arith-review-add-sub-frac-word-probs/v/adding-fractions-with-unlike-denominators-word-problem'}],
+  dec:[{t:'Dividing a decimal by a whole number', u:'https://www.khanacademy.org/math/6th-engage-ny/engage-6th-module-2/6th-module-2-topic-c/v/dividing-a-decimal-by-a-whole-number'}],
+  rate:[{t:'Rates with fractions', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-fractions-decimals/cc-7th-rates/v/determining-rates-with-fractions', m:'5 min'}],
+  prop:[{t:'Writing proportions', u:'https://en.khanacademy.org/math/grade-7-virginia/x1e291b30c04dacab:ratios-proportions/x1e291b30c04dacab:writing-solving-proportions/v/writing-proportions'}],
+  int:[{t:'Adding and subtracting negative numbers', u:'https://www.khanacademy.org/math/7th-grade-illustrative-math/unit-5-rational-number-arithmetic/lesson-5-representing-subtraction/v/adding-and-subtracting-negative-number-examples'},
+       {t:'Subtracting a negative is adding a positive', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-negative-numbers-add-and-subtract/cc-7th-sub-neg-intro/v/why-subtracting-a-negative-equivalent-to-adding-a-positive'}],
+  pct:[{t:'Percent problems: tax and discount', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-fractions-decimals/cc-7th-percent-word-problems/v/tax-discount-and-tip-examples'}],
+  frac:[{t:'Dividing mixed numbers', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-negative-numbers-multiply-and-divide/cc-7th-mult-div-neg-fractions/v/dividing-mixed-numbers'}],
+  eq:[{t:'Two-step equation word problem', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-variables-expressions/cc-7th-linear-eq-word-probs/v/basic-linear-equation-word-problem'},
+      {t:'Two-step inequality word problem', u:'https://www.khanacademy.org/v/interpreting-inequalities', m:'7 min'}],
+  geo:[{t:'Area of a circle', u:'https://www.khanacademy.org/math/fl-7th-math/cc-7th-geometry/cc-7th-area-circumference/v/area-of-a-circle', m:'4 min'},
+       {t:'Making a scale drawing', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-geometry/cc-7th-scale-drawings/v/constructing-scale-drawings'}],
+  prob:[{t:'Simple probability', u:'https://www.khanacademy.org/math/probability/v/simple-probability', m:'3 min'},
+        {t:'Mean, median and mode', u:'https://www.khanacademy.org/math/cc-sixth-grade-math/cc-6th-data-statistics/mean-and-median/v/statistics-intro-mean-median-and-mode'}]
+};
+const khanHTML = skill => (KHAN[skill] || []).length ? `<div class="ka"><p><b>More videos from Khan Academy</b><br><small class="muted">Opens in a new tab. Come back here when you’re done.</small></p>
+  ${KHAN[skill].map(v => `<a href="${v.u}" target="_blank" rel="noopener" data-ka="${esc(v.t)}">${ICO.play}<span>${esc(v.t)}</span>${v.m ? `<small>${v.m}</small>` : ''}</a>`).join('')}</div>` : '';
+
+/* ===== lesson video player ===== */
+let vid = null;
+function playLesson(skill, after){
+  stopSpeak();
+  const frames = LESSONS[skill];
+  vid = {skill, i:0, playing:true, read:!!S.readLessons, after, timer:null};
+  S.stats.lessons++; if (S.stats.lessons >= 3) award('student'); mission('lesson');
+  S.seen.lessons[skill] = (S.seen.lessons[skill] || 0) + 1; report('lesson', {skill}); save();
+  showModal(`<p class="muted" style="margin:0">Lesson video</p><h2 class="disp" style="font-size:32px">${SK(skill).name}</h2>
+    <div class="video" id="vScreen"></div><p class="vcap" id="vCap"></p>
+    <div class="vprog" id="vProg">${frames.map(() => '<i><b></b></i>').join('')}</div>
+    <div class="vctl"><button class="btn line" id="vPrev">Back</button><button class="btn" id="vPlay">Pause</button><button class="btn line" id="vNext">Next</button>
+      <button class="btn line" id="vRead" aria-pressed="${vid.read}">${vid.read ? 'Reading aloud' : 'Read aloud'}</button><button class="btn line" id="vClose">Done</button></div>
+    ${khanHTML(skill)}`);
+  $$('[data-ka]').forEach(a => a.onclick = () => { if (vid && vid.playing) $('#vPlay').click(); report('khan', {skill, video:a.dataset.ka}); });
+  $('#vPrev').onclick = () => vGo(vid.i - 1);
+  $('#vNext').onclick = () => vGo(vid.i + 1);
+  $('#vPlay').onclick = () => { vid.playing = !vid.playing; $('#vPlay').textContent = vid.playing ? 'Pause' : 'Play'; if (vid.playing){ if (vid.i >= frames.length-1 && vid.ended) vGo(0); else vGo(vid.i); } else { clearTimeout(vid.timer); stopSpeak(); $$('#vProg i.cur b').forEach(b => b.style.animationPlayState = 'paused'); } };
+  $('#vRead').onclick = () => { vid.read = !vid.read; S.readLessons = vid.read; save(); $('#vRead').textContent = vid.read ? 'Reading aloud' : 'Read aloud'; $('#vRead').setAttribute('aria-pressed', vid.read); vGo(vid.i); };
+  $('#vClose').onclick = () => { const a = vid.after; vStop(); closeModal(); if (a) a(); };
+  vGo(0);
+}
+function vGo(i){
+  const frames = LESSONS[vid.skill]; i = Math.max(0, Math.min(frames.length-1, i));
+  clearTimeout(vid.timer); stopSpeak(); vid.i = i; vid.ended = false;
+  const f = frames[i];
+  $('#vScreen').innerHTML = `<div class="frame">${f.vis}</div>`;
+  $('#vCap').innerHTML = f.cap;
+  const dur = 4200 + f.cap.replace(/<[^>]+>/g,'').length*45;
+  $$('#vProg i').forEach((el,k) => { el.className = k < i ? 'on' : k === i ? 'cur' : ''; const b = el.querySelector('b'); b.style.animation = 'none'; void b.offsetWidth; b.style.animation = k === i ? `vfill ${dur}ms linear forwards` : ''; if (!vid.playing) b.style.animationPlayState = 'paused'; });
+  if (!vid.playing) return;
+  const advance = () => { if (!vid || !vid.playing) return; if (vid.i < frames.length-1) vGo(vid.i + 1); else { vid.ended = true; vid.playing = false; $('#vPlay').textContent = 'Play again'; } };
+  if (vid.read && 'speechSynthesis' in window){ speakEls([$('#vCap')], () => { vid.timer = setTimeout(advance, 700); }); }
+  else vid.timer = setTimeout(advance, dur);
+}
+function vStop(){ if (vid){ clearTimeout(vid.timer); vid = null; } stopSpeak(); }
+
+/* ===== read aloud ===== */
+function speakEls(els, done){
+  if (!('speechSynthesis' in window)){ toast('Reading aloud isn’t available on this computer.'); return; }
+  stopSpeak();
+  const text = els.filter(Boolean).map(el => { const c = el.cloneNode(true); c.querySelectorAll('.fr').forEach(f => f.replaceWith(` ${f.children[0].textContent} over ${f.children[1].textContent} `)); return c.textContent.replace(/−/g,' minus ').replace(/×/g,' times ').replace(/÷/g,' divided by '); }).join('. ');
+  const u = new SpeechSynthesisUtterance(text); u.rate = .95; if (done) u.onend = done;
+  speechSynthesis.speak(u);
+}
+function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} }
+
+/* ===== scratch pad ===== */
+const pad = {erase:false, drawing:false, last:null, ctx:null};
+function openPad(){
+  const p = $('#pad'); p.hidden = false; sizePad(); mission('pad');
+}
+function closePad(){ $('#pad').hidden = true; }
+function clearPad(){ const c = $('#padC'); if (pad.ctx) pad.ctx.clearRect(0,0,c.width,c.height); }
+function sizePad(){
+  const c = $('#padC'), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (c.width === Math.round(r.width*dpr) && c.height === Math.round(r.height*dpr)) return;
+  const old = pad.ctx ? c.toDataURL() : null;
+  c.width = Math.round(r.width*dpr); c.height = Math.round(r.height*dpr);
+  pad.ctx = c.getContext('2d'); pad.ctx.scale(dpr,dpr); pad.ctx.lineCap = 'round'; pad.ctx.lineJoin = 'round';
+  if (old){ const im = new Image(); im.onload = () => pad.ctx.drawImage(im,0,0,r.width,r.height); im.src = old; }
+}
+(function initPad(){
+  const c = $('#padC');
+  const pos = e => { const r = c.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  c.addEventListener('pointerdown', e => { sizePad(); pad.drawing = true; pad.last = pos(e); c.setPointerCapture(e.pointerId); });
+  c.addEventListener('pointermove', e => {
+    if (!pad.drawing) return; const p = pos(e), x = pad.ctx;
+    x.globalCompositeOperation = pad.erase ? 'destination-out' : 'source-over';
+    x.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--text'); x.lineWidth = pad.erase ? 22 : 3;
+    x.beginPath(); x.moveTo(...pad.last); x.lineTo(...p); x.stroke(); pad.last = p;
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev => c.addEventListener(ev, () => pad.drawing = false));
+  $('#pPen').onclick = () => { pad.erase = false; $('#pPen').setAttribute('aria-pressed','true'); $('#pErase').setAttribute('aria-pressed','false'); };
+  $('#pErase').onclick = () => { pad.erase = true; $('#pErase').setAttribute('aria-pressed','true'); $('#pPen').setAttribute('aria-pressed','false'); };
+  $('#pClear').onclick = clearPad;
+  $('#pClose').onclick = closePad;
+})();
+
+/* ===== modals and menus ===== */
+function showModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); vStop(); $('#sheet').innerHTML = ''; }
+function welcome(){
+  showModal(`<div class="stage">${stageSVG({gear:{}, crowd:0, mode:'idle'})}</div>
+    <h2 class="disp">Encore</h2>
+    <p>Start with one microphone. Run sound for simchas, solve the jobs, earn money and buy gear, until the crowd at your own concert tour is calling for an encore.</p>
+    <label for="nm">Name your company</label>
+    <input type="text" id="nm" maxlength="30" placeholder="For example: Clear Sound Productions">
+    <div class="acts"><button class="btn big" id="bW">Start</button></div>`);
+  const go = () => { const again = !!S, nm = $('#nm').value.trim() || 'Clear Sound Productions'; const keepAct = S && S.act; const prevR = (S && S.restarts) || 0; S = newState(nm); if (keepAct) S.act = keepAct; S.restarts = prevR + (again ? 1 : 0); report('start', {name:nm, again}); flush(); closeModal(); renderHub(); };
+  $('#bW').onclick = go; $('#nm').onkeydown = e => { if (e.key === 'Enter') go(); }; $('#nm').focus();
+}
+function helpScreen(){
+  showModal(`<h2 class="disp">How to play</h2>
+    <p><b>Shifts.</b> A shift is one night of work. Pick your pace: <b>Quick</b> for 8 fast challenges, <b>Steady</b> for 5 at your own speed, or <b>With Dovid</b> for 4 done step by step together.</p>
+    <p><b>Stuck?</b> Tap <b>Help me, Dovid</b>. He breaks the problem into little steps. You still get paid, and your combo keeps going.</p>
+    <p><b>Watch how</b> plays a short video for that skill. <b>Scratch pad</b> gives you paper to work on. <b>Read it</b> reads the challenge out loud.</p>
+    <p><b>Combo.</b> Every challenge you solve adds to your combo. At 3 you earn 1½ times as much, at 5 double, and at 10 triple, plus streak bonuses.</p>
+    <p><b>New skills.</b> You start with division. When you reach 3 stars and solve 6 of your last 8 on your own, the next skill unlocks: fractions, then decimals, then the bigger jobs.</p>
+    <p><b>Growing.</b> Earn points to level up your company. Each skill earns up to 4 stars. Buy gear to make every job pay more, and finish your daily missions for the daily chest.</p>
+    <p><b>Saving.</b> Your company saves to the school server automatically. Sign in on any Chromebook and you’ll pick up right where you left off.</p>
+    <div class="acts"><button class="btn line" id="bNew">Start a new company</button><button class="btn" id="bX">Back to the game</button></div>`);
+  $('#bX').onclick = closeModal;
+  $('#bNew').onclick = () => { showModal(`<h2 class="disp">Start over?</h2><p>This erases ${esc(S.company)} on this computer. Copy your save code first if you might want it back.</p><div class="acts"><button class="btn line" id="bK">Keep playing</button><button class="btn" id="bWipe">Start a new company</button></div>`); $('#bK').onclick = closeModal; $('#bWipe').onclick = welcome; };
+}
+function saveScreen(){
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+  showModal(`<h2 class="disp">Save code</h2><p>Copy this code and keep it somewhere safe. Paste it here on any computer to pick up where you left off.</p>
+    <textarea id="code" readonly>${code}</textarea>
+    <p style="margin:10px 0 4px">Have a code? Paste it here.</p>
+    <textarea id="codeIn" placeholder="Paste a save code"></textarea>
+    <div class="acts"><button class="btn line" id="bCopy">Copy my code</button><button class="btn line" id="bLoad">Load pasted code</button><button class="btn" id="bX">Done</button></div>`);
+  $('#bX').onclick = closeModal;
+  $('#bCopy').onclick = () => { const t = $('#code'); t.select(); try{ navigator.clipboard.writeText(t.value); }catch(e){ document.execCommand('copy'); } $('#bCopy').textContent = 'Copied'; };
+  $('#bLoad').onclick = () => {
+    try{ const s = JSON.parse(decodeURIComponent(escape(atob($('#codeIn').value.trim())))); if (!s || s.v !== 3 || !s.skills) throw 0;
+      S = s; save(); closeModal(); renderHub(); toast('Game loaded.'); }
+    catch(e){ $('#bLoad').textContent = 'That code didn’t work. Check it and try again.'; }
+  };
+}
+
+/* ===== wiring ===== */
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.buy) return buy(b.dataset.buy);
+  if (b.dataset.pace){ S.pace = b.dataset.pace; save(); $$('[data-pace]').forEach(x => x.setAttribute('aria-pressed', x === b)); return; }
+  if (b.dataset.practice){ if (S.shift){ toast('Finish your shift first. It’s waiting for you.'); return; } return startShift(b.dataset.practice); }
+  if (b.dataset.lesson) return playLesson(b.dataset.lesson, () => renderHub());
+});
+$('#bHelp').onclick = () => S && helpScreen();
+$('#bOut').onclick = () => signOut();
+$('#inGo').onclick = signIn;
+$('#inPin').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
+$('#inName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#inPin').focus(); });
+$('#teachLink').onclick = () => { const p = prompt('Teacher password (same as the school portal):'); if (p){ TPASS = p; loadTeacher(); } };
+window.addEventListener('resize', () => { if (!$('#pad').hidden) sizePad(); });
+
+
+/* ===== teacher view ===== */
+let TPASS = '';
+const fmtWhen = t => t ? new Date(t).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : '';
+function weekDates(){ const d = new Date(); d.setDate(d.getDate() - d.getDay()); return [...Array(7)].map((_,i) => { const x = new Date(d); x.setDate(d.getDate()+i); return todayStr(x); }); }
+function studentRow(s){
+  const st = s.state || {};
+  if (!st.skills) return `<tr><td><b>${esc(s.name)}</b></td><td colspan="6" class="small">Signed in but hasn’t started a company yet.</td><td>${fmtWhen(s.last_seen || s.updated_at)}</td><td><button class="link" data-reset="${esc(s.id)}" data-name="${esc(s.name)}">Reset</button></td></tr>`;
+  const open = id => ORDER.indexOf(id) === 0 || !!(st.open && st.open[id]);
+  const und = id => { const k = st.skills[id] || {m:0}; return k.m >= 300 && (k.rec || []).length >= 8 && (k.rec || []).slice(-8).filter(Boolean).length >= 6; };
+  const curId = [...ORDER].filter(open).pop(), ck = st.skills[curId] || {m:0, rec:[]};
+  const stars = id => Math.min(4, Math.floor(((st.skills[id] || {}).m || 0)/100) + 1);
+  const recent = (ck.rec || []).slice(-8), solo = recent.filter(Boolean).length;
+  const td = todayStr(), wd = weekDates(), A = (st.act || {})[td] || {m:0, n:0, t:0};
+  const W = wd.reduce((x, d) => { const a = (st.act || {})[d]; if (a){ x.m += a.m; x.n += a.n; x.t += a.t; } return x; }, {m:0, n:0, t:0});
+  const chips = SKILLS.map(sk => `<span class="chip ${sk.id === curId ? 'cur' : und(sk.id) ? 'ok' : open(sk.id) ? '' : 'lock'}" title="${esc(sk.math)}">${esc(sk.name)}${open(sk.id) ? ` ${'★'.repeat(stars(sk.id))}` : ''}${und(sk.id) ? ' ✓' : ''}</span>`).join('');
+  return `<tr>
+    <td><b>${esc(s.name)}</b><div class="small">${esc(st.company || '')}, level ${st.level || 1}</div></td>
+    <td><b>${esc(SK(curId).name)}</b><div class="small">${esc(SK(curId).math)}</div><div class="small">${stars(curId)} of 4 stars</div></td>
+    <td class="n">${recent.length ? `${solo} of ${recent.length}` : '—'}<div class="small">on his own</div></td>
+    <td><div class="chips">${chips}</div></td>
+    <td class="n">${A.n} solved${A.t ? `<div class="small">${A.t} with Dovid</div>` : ''}<div class="small">${Math.round(A.m/60)} min</div></td>
+    <td class="n">${W.n} solved${W.t ? `<div class="small">${W.t} with Dovid</div>` : ''}<div class="small">${Math.round(W.m/60)} min</div></td>
+    <td class="n">${(st.stats || {}).solved || 0}<div class="small">all time</div></td>
+    <td>${fmtWhen(s.last_seen || s.updated_at)}</td>
+    <td><button class="link" data-reset="${esc(s.id)}" data-name="${esc(s.name)}">Reset</button></td></tr>`;
+}
+async function loadTeacher(){
+  let res;
+  try{ res = await rpc('stage_admin_data', {p_pass:TPASS}); }catch(e){ alert('Can’t reach the school server. Check the Wi-Fi and try again.'); return; }
+  if (!res.ok){ alert('That password isn’t right.'); TPASS = ''; return; }
+  await fetchLock();
+  document.body.dataset.mode = 'teacher';
+  $('#tview').innerHTML = `<div class="twrap">
+    <div class="thead"><h2 class="disp">Encore: teacher view</h2><button class="ghost" id="tRefresh">Refresh</button><button class="ghost" id="tClose">Close</button></div>
+    <div class="tbar"><label><input type="checkbox" id="lkOn" ${LOCK.on ? 'checked' : ''}> <b id="lkState">${LOCK.on ? 'Daily lock on' : 'Daily lock off'}</b></label>
+      <label>Closes <input type="time" id="lkClose" value="${LOCK.close}"></label><label>Reopens <input type="time" id="lkOpen" value="${LOCK.open}"></label>
+      <button class="btn" id="lkSave" style="padding:6px 14px;font-size:15px">Save</button><span class="small" id="lkNow">${isClosed() ? 'Closed right now' : 'Open right now'}</span></div>
+    <div class="tgrid">
+      <div class="tcard"><table class="tbl"><tr><th>Student</th><th>Now learning</th><th class="n">Last 8</th><th>Skills (★ stars, ✓ understood)</th><th class="n">Today</th><th class="n">This week</th><th class="n">Solved</th><th>Last active</th><th></th></tr>
+        ${res.students.map(studentRow).join('') || '<tr><td colspan="9">No one has signed in yet. Students show up here after their first sign-in.</td></tr>'}</table>
+        <p class="small" style="margin:10px 0 0">A skill unlocks the next one when he reaches 3 stars and solves 6 of his last 8 on his own. “Last 8” is for the skill he’s learning now. Problems solved with Dovid’s help count toward stars but not toward the 6 of 8.</p></div>
+      <div class="tcard"><b>Activity log</b>
+        <table class="tbl tlog" style="margin-top:6px"><tr><th>When</th><th>Student</th><th>What happened</th></tr>
+        ${res.log.map(l => `<tr><td style="white-space:nowrap">${fmtWhen(l.at)}</td><td>${esc(l.name || '')}</td><td>${esc(l.detail || l.event)}</td></tr>`).join('') || '<tr><td colspan="3" class="small">Nothing yet.</td></tr>'}</table></div>
+    </div></div>`;
+  $('#lkOn').onchange = () => { $('#lkState').textContent = $('#lkOn').checked ? 'Daily lock on' : 'Daily lock off'; };
+  $('#lkSave').onclick = async () => {
+    const r = await rpc('stage_admin_set_settings', {p_pass:TPASS, p_lock_on:$('#lkOn').checked, p_close:$('#lkClose').value, p_open:$('#lkOpen').value});
+    if (r.ok){ await fetchLock(); $('#lkNow').textContent = isClosed() ? 'Closed right now' : 'Open right now'; toast(LOCK.on ? `Saved. Closes at ${fmtT12(LOCK.close)}, reopens at ${fmtT12(LOCK.open)}.` : 'Saved. The daily lock is off.'); }
+    else toast(r.error === 'time' ? 'Check the times and try again.' : 'Couldn’t save. Check the password.');
+  };
+  $('#tRefresh').onclick = loadTeacher;
+  $('#tClose').onclick = () => { TPASS = ''; showGate(); };
+  $$('[data-reset]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Erase ${b.dataset.name}’s Encore company and progress? He’ll start over from the beginning.`)) return;
+    const r = await rpc('stage_admin_reset', {p_pass:TPASS, p_student:b.dataset.reset}); toast(r.ok ? 'Progress erased.' : 'Couldn’t reset.'); loadTeacher();
+  });
+}
+
+function startGame(state){
+  document.body.dataset.mode = 'app'; shownCash = null;
+  S = state && state.v === 3 && state.skills ? state : null;
+  if (S){
+    if (!S.math7){ const sk = {}; SKILLS.forEach(x => sk[x.id] = {m:0, ease:0}); S.skills = sk; S.seen.lessons = {}; S.shift = null; S.math7 = true; }
+    if (!S.found){ ['div','frb','dec'].forEach(id => { if (!S.skills[id]) S.skills[id] = {m:0, ease:0}; delete S.seen.lessons[id]; }); S.open = {div:true}; S.shift = null; S.found = true; }
+    SKILLS.forEach(x => { if (!S.skills[x.id]) S.skills[x.id] = {m:0, ease:0}; });
+    S.act = S.act || {};
+    header(); renderHub(); save();
+  } else { $('#view').innerHTML = `<div class="stage">${stageSVG({gear:{}, crowd:0, mode:'idle'})}</div>`; welcome(); }
+}
+FX.init();
+(async () => {
+  await Promise.race([fetchLock(), new Promise(r => setTimeout(r, 3000))]);
+  if (DEMO){ NAME = 'Demo'; startGame(null); toast('Demo mode: nothing is saved.'); return; }
+  showGate();
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+ENCORE (sound and stage company) - LAUNCH CHECKLIST
+A new program, separate from Margin. Saves to the SCHOOL Supabase project and uses the
+school portal sign-in, like the other programs.
+
+1. SUPABASE (your SCHOOL project)
+   SQL Editor > New query: paste ALL of setup.sql and click Run. It should say Success.
+   It only adds new tables. Safe to run again any time.
+   (If you already ran the setup.sql from earlier today, you don't need to run it again.)
+
+2. GITHUB (YDTSCHOOL / PORTAL repository)
+   Add file > Upload files > drag in the whole "encore" folder > Commit.
+   After a minute or two the address will be:
+   https://ydtschool.github.io/PORTAL/encore/
+
+3. SCHOOL PORTAL
+   Add a program called Encore with that address, and tick it for Shlomo.
+   You can untick or remove Margin for him.
+
+4. TEST
+   a. Sign in with Shlomo's portal first name and PIN. Name a company, solve a few challenges.
+   b. Sign out, then sign in on a DIFFERENT Chromebook. Everything should be where he left it.
+   c. On the sign-in screen click Teacher and enter your portal password to see his progress.
+   d. If you tested with his account, press Reset in the Teacher view so he starts fresh.
+
+GOOD TO KNOW
+   Saves to the server automatically after every answer. "Saved" shows at the top.
+   Signs out after 20 minutes without activity. His work is already saved.
+   Daily lock: off to start. Turn it on in the Teacher view if you want set hours.
+   Try it without signing in: add ?demo to the end of the address (nothing is saved).
