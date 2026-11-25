@@ -1,0 +1,54 @@
+MARGIN 1.0 - LAUNCH CHECKLIST
+A music store simulation. Sign-in, auto-save, help emails and the teacher view work
+the same way as Compound, in the same SCHOOL Supabase project.
+
+1. SUPABASE (your SCHOOL project)
+   a. pg_net should already be on from Compound (Database > Extensions). If not, turn it on.
+   b. SQL Editor > New query: paste ALL of setup.sql and click Run. It should say Success.
+      Safe to run again any time. If the paste gets cut off, run it in parts at the
+      "END OF PART" lines, in order.
+
+2. PUT THE FILES ONLINE (same place as your other programs)
+   GitHub Pages: open the YDTSCHOOL / PORTAL repository, Add file > Upload files, and drag in
+   the whole "margin" folder. Commit. After a minute or two the address will be
+   https://ydtschool.github.io/PORTAL/margin/
+   (Or, once Netlify has credits again: drag the "margin" folder onto Netlify.)
+
+3. SCHOOL PORTAL
+   a. Make sure Shlomo is in the portal with a first name and PIN (he already is).
+   b. Add a program called Margin with the address from step 2, and tick it for him.
+
+4. TEACHER VIEW (on the Margin sign-in screen, click Teacher, use your portal password)
+   a. Help emails: Margin uses Compound's email settings automatically, so they should
+      already say "Emails are on". To send Margin's emails to a different address, type it
+      there with the Resend key and press Save.
+   b. Click Send test email. Check your inbox and spam folder.
+   c. Daily lock: OFF to start. Turn it on and set the times if you want Margin to close
+      at certain hours, the same as Compound.
+
+5. TEST BEFORE HE STARTS
+   a. Sign in as a test student (or as him), name a store, order stock, run a few weeks.
+   b. Sign out and sign back in: the store should be exactly where you left it.
+   c. Press "Ask my teacher", send a question. You get an email with his store's numbers
+      and a REPLY TO HIM HERE link. Reply; he sees it the next time he signs in.
+   d. In the Teacher view press Reset on whoever you tested with, so he starts fresh.
+
+WHAT YOU SEE IN THE TEACHER VIEW
+  For each student: game week, net worth (and his best ever), goals reached, total profit,
+  last week's profit, loan, reputation, time today and this week, and help requests.
+  Activity log: every order, offer he took or turned down, bank move, upgrade, and each
+  week's result, so you can see his decisions, not just his score.
+  Help requests tab: his questions and your replies, with read receipts.
+
+REPLYING TO HIM
+  Every help email has a "REPLY TO HIM HERE" link. Click it, enter your teacher password,
+  type your reply and press Send reply. (Pressing Reply in your email app does NOT reach him.)
+
+GOOD TO KNOW
+  Saves automatically after every action. Signs out after 20 minutes without activity.
+  "New store" lets him start over; you'll see it in the log and in the teacher table.
+  Try it without signing in: add ?demo to the end of the address (nothing is saved).
+
+FILES
+  index.html, styles.css, margin.js   the program (settings at the top of margin.js)
+  setup.sql                            the database setup

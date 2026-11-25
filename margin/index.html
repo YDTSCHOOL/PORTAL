@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Margin: a music store simulation</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-mode="out">
+
+<!-- Sign-in, teacher view and reply page -->
+<div class="outer">
+  <section class="screen on" id="signin">
+    <div class="signwrap">
+      <div class="signbrand"><b>Margin</b><span>A music store simulation</span></div>
+      <div class="card">
+        <div id="signForm">
+          <h3>Sign in</h3>
+          <p class="muted" style="margin:0">Use the same name and PIN as the school portal.</p>
+          <label class="fieldrow"><span>First name</span><input id="inName" autocomplete="off"></label>
+          <label class="fieldrow"><span>PIN</span><input id="inPin" type="password" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+          <p class="err" id="inErr"></p>
+        </div>
+        <div id="closedBox" hidden><p class="closed-big">The store is closed for today.</p><p class="muted" style="margin:0" id="closedMsg"></p></div>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:10px">
+          <button class="btn" id="inGo">Sign in</button><span style="flex:1"></span><button class="link" id="teachLink">Teacher</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="screen" id="teacher"></section>
+  <section class="screen" id="reply"></section>
+</div>
+
+<!-- The game -->
+<div class="app">
+  <header>
+    <div class="brand"><b id="storeName">Margin</b><span id="whoLine">A music store simulation</span></div>
+    <span class="clockwarn" id="clockWarn" hidden></span>
+    <div class="stat"><small>Week</small><strong class="num" id="hWeek">1</strong></div>
+    <div class="stat"><small>Cash</small><strong class="num" id="hCash">$0</strong></div>
+    <div class="stat"><small>Net worth</small><strong class="num" id="hNW">$0</strong></div>
+    <div class="stat"><small>Reputation</small><strong class="num" id="hRep">50</strong><div class="repbar"><i id="hRepBar"></i></div></div>
+    <div class="menu">
+      <span class="saving" id="saving" aria-live="polite"></span>
+      <button class="ghost" id="bMsg">Ask my teacher<span class="badge" id="msgBadge" hidden>0</span></button>
+      <button class="ghost" id="bHelp">How to play</button>
+      <button class="ghost" id="bNew">New store</button>
+      <button class="ghost" id="bOut">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="left">
+      <div class="panel stock">
+        <div class="ph"><h2>Stock and prices</h2><p>Set your prices, then order from the supplier.</p></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr>
+              <th>Product</th><th>In stock</th><th>Your avg cost</th><th>Supplier price</th><th>Other shops charge</th><th>Your price</th><th>Sold last week</th><th>Order</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="stockfoot">
+          <div class="terms">Supplier discounts: 5% off an order of 50 or more of one product, 10% off 100 or more, 15% off 250 or more. Shipping is $20 for each product you order.</div>
+          <div class="total num" id="orderTotal">Order total $0.00</div>
+          <button class="btn" id="bOrder">Place order</button>
+        </div>
+      </div>
+
+      <div class="tools">
+        <div class="panel"><div class="ph"><h2>Bank</h2></div><div class="pbody" id="bank"></div></div>
+        <div class="panel"><div class="ph"><h2>Shop</h2></div><div class="pbody" id="shop"></div></div>
+        <div class="panel"><div class="ph"><h2>Ledger</h2><p>Net worth by week</p></div><div class="pbody"><canvas id="chart"></canvas><div class="goal" id="goal"></div></div></div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div id="eventBox"></div>
+      <div class="counter" id="counter"></div>
+      <div class="toast" id="toast" role="status"></div>
+      <div class="runbar"><button class="btn" id="bRun">Open the store for week 1</button></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Messages with your teacher">
+  <div class="dh"><h3>Ask my teacher</h3><button class="ghost" id="drawerX">Close</button></div>
+  <div class="db" id="drawerBody"></div>
+</aside>
+<div class="toastbox" id="toastbox"></div>
+
+<script src="margin.js" charset="utf-8"></script>
+</body>
+</html>
