@@ -434,10 +434,21 @@ body[data-mode="teacher"] .tview{display:block}
 @keyframes vspot{from{--sx:20%}to{--sx:80%}}
 .ka{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
 .ka p{margin:0 0 8px}
-.ka a{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);text-decoration:none;font-weight:600;margin-top:6px}
-.ka a:hover{border-color:var(--amber)}
-.ka a svg{width:22px;height:22px;flex:none;color:var(--cyan)}
-.ka a small{margin-left:auto;color:var(--muted);font-weight:500}
+.vpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 4px;padding:10px 12px;background:var(--panel2);border-radius:10px}
+.vpick select{padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:15px;max-width:100%}
+.kab{display:flex;width:100%;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);font-weight:600;margin-top:6px;text-align:left;font-size:16px}
+.kab:hover{border-color:var(--amber)}
+.kab svg{width:22px;height:22px;flex:none;color:var(--cyan)}
+.kab small{margin-left:auto;color:var(--amber);font-weight:700}
+.yt{position:fixed;inset:0;z-index:80;background:rgba(8,10,16,.82);display:grid;place-items:center;padding:12px}
+.ytbox{width:min(1000px,100%);background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.ythead{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.ythead b{font-size:18px}
+.ytstage{position:relative;aspect-ratio:16/9;max-height:calc(100vh - 110px);background:#000;margin:0 auto}
+.ytframe,.ytframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ytcover{position:absolute;inset:0;background:#0f1220;color:#fff8ea;display:grid;place-items:center;text-align:center;cursor:pointer;padding:20px}
+[hidden]{display:none!important}
+.ytcover b{font-size:26px}.ytcover p{color:#c9c2b4;margin:6px 0 14px}
 @media (prefers-reduced-motion:reduce){
   .beams,.beams .beam,.pool,.flare,.haze ellipse,.mote,.marq,.eqbar,.stage.boot *,.stat.bump,.combo,.combo svg,.bar i,.bar i::after,.ring .arc,.chart rect,.cbar .dots i,.chal.enter>div,.field.shake,.qcard.win,.item.got,.tro::after,.banner.on b,.video{animation:none!important}
 }
@@ -489,6 +500,10 @@ body[data-mode="teacher"] .tview{display:block}
 <div class="modal" id="modal"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" role="status"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
+<div class="yt" id="yt" hidden><div class="ytbox">
+  <div class="ythead"><b id="ytTitle"></b><span class="muted">Khan Academy</span><span style="flex:1"></span><button class="btn line" id="ytClose">Done</button></div>
+  <div class="ytstage"><div class="ytframe" id="ytFrame"></div><div class="ytcover" id="ytCover" hidden></div></div>
+</div></div>
 <div class="banner" id="banner" role="status"></div>
 <script>
 /* ===== helpers ===== */
@@ -543,7 +558,7 @@ function report(kind, d){
     solve: () => ['solve', `${SK(d.skill).name}, level ${d.tier}: ${TIER_WORD(d.how)}`],
     shift: () => ['shift', `Finished a shift (${d.event}): ${d.solo} on his own, ${d.team} with Dovid, best combo ${d.best}, earned $${Math.round(d.earned)}`],
     buy: () => ['gear', `Bought ${d.item} for $${d.price}`],
-    khan: () => ['khan', `Opened Khan Academy video "${d.video}" (${SK(d.skill).name})`],
+    khan: () => ['khan', `Watched Khan Academy video "${d.video}" (${SK(d.skill).name}): ${d.secs >= 60 ? Math.round(d.secs/60) + ' min' : d.secs + ' sec'}${d.done ? ', to the end' : ', stopped partway'}`],
     lesson: () => ['lesson', `Watched Dovid’s lesson: ${SK(d.skill).name}`],
     unlock: () => ['unlock', `Showed he understands ${SK(d.after).name}. Unlocked ${SK(d.skill).name}`],
     start: () => ['company', d.again ? `Started over with a new company, "${d.name}"` : `Named his company "${d.name}"`]
@@ -1802,28 +1817,79 @@ function countUp(el, to){
 }
 
 /* ===== Khan Academy videos (taught by Sal Khan) ===== */
+/* ===== Khan Academy videos, played inside Encore (all taught by Sal Khan) ===== */
 const KHAN = {
-  div:[{t:'The idea of division', u:'https://www.khanacademy.org/math/arithmetic-home/multiply-divide/division-intro/v/the-idea-of-division'},
-       {t:'Intro to long division (remainders)', u:'https://www.khanacademy.org/math/arithmetic/multiplication-division/long-division/v/division-2'},
-       {t:'Long division with remainders: 2292 ÷ 4', u:'https://www.khanacademy.org/math/cc-fifth-grade-math/multi-digit-multiplication-and-division/imp-multi-digit-division-2/v/division-3-more-long-division-and-remainder-examples'}],
-  frb:[{t:'Writing improper fractions as mixed numbers', u:'https://www.khanacademy.org/math/pre-algebra/pre-algebra-fractions/pre-algebra-mixed-number/v/changing-an-improper-fraction-to-a-mixed-number', m:'4 min'},
-       {t:'Adding fractions with unlike denominators', u:'https://www.khanacademy.org/math/arithmetic/fraction-arithmetic/arith-review-add-sub-frac-word-probs/v/adding-fractions-with-unlike-denominators-word-problem'}],
-  dec:[{t:'Dividing a decimal by a whole number', u:'https://www.khanacademy.org/math/6th-engage-ny/engage-6th-module-2/6th-module-2-topic-c/v/dividing-a-decimal-by-a-whole-number'}],
-  rate:[{t:'Rates with fractions', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-fractions-decimals/cc-7th-rates/v/determining-rates-with-fractions', m:'5 min'}],
-  prop:[{t:'Writing proportions', u:'https://en.khanacademy.org/math/grade-7-virginia/x1e291b30c04dacab:ratios-proportions/x1e291b30c04dacab:writing-solving-proportions/v/writing-proportions'}],
-  int:[{t:'Adding and subtracting negative numbers', u:'https://www.khanacademy.org/math/7th-grade-illustrative-math/unit-5-rational-number-arithmetic/lesson-5-representing-subtraction/v/adding-and-subtracting-negative-number-examples'},
-       {t:'Subtracting a negative is adding a positive', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-negative-numbers-add-and-subtract/cc-7th-sub-neg-intro/v/why-subtracting-a-negative-equivalent-to-adding-a-positive'}],
-  pct:[{t:'Percent problems: tax and discount', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-fractions-decimals/cc-7th-percent-word-problems/v/tax-discount-and-tip-examples'}],
-  frac:[{t:'Dividing mixed numbers', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-negative-numbers-multiply-and-divide/cc-7th-mult-div-neg-fractions/v/dividing-mixed-numbers'}],
-  eq:[{t:'Two-step equation word problem', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-variables-expressions/cc-7th-linear-eq-word-probs/v/basic-linear-equation-word-problem'},
-      {t:'Two-step inequality word problem', u:'https://www.khanacademy.org/v/interpreting-inequalities', m:'7 min'}],
-  geo:[{t:'Area of a circle', u:'https://www.khanacademy.org/math/fl-7th-math/cc-7th-geometry/cc-7th-area-circumference/v/area-of-a-circle', m:'4 min'},
-       {t:'Making a scale drawing', u:'https://www.khanacademy.org/math/cc-seventh-grade-math/cc-7th-geometry/cc-7th-scale-drawings/v/constructing-scale-drawings'}],
-  prob:[{t:'Simple probability', u:'https://www.khanacademy.org/math/probability/v/simple-probability', m:'3 min'},
-        {t:'Mean, median and mode', u:'https://www.khanacademy.org/math/cc-sixth-grade-math/cc-6th-data-statistics/mean-and-median/v/statistics-intro-mean-median-and-mode'}]
+  div:[{t:'Intro to long division', y:'KFzcwWTEDDI'}, {t:'Long division with remainders', y:'NcADzGz3bSI'}],
+  frb:[{t:'Adding fractions with different bottoms', y:'PKh5B9xyzSc'}],
+  dec:[{t:'Dividing a decimal by a whole number', y:'Z_NHrwK6ALE'}],
+  rate:[{t:'Rates with fractions', y:'2DBBKArGfus'}],
+  prop:[{t:'Proportion word problem: flour and oatmeal', y:'4ywTWCaLmXE'}],
+  int:[{t:'Adding and subtracting negative numbers', y:'NQSN00zL5gg'}],
+  pct:[{t:'Solving percent problems', y:'TvSKeTFsaj4'}],
+  frac:[{t:'Dividing mixed numbers', y:'51-U-Jkq79A'}],
+  eq:[{t:'Solving two-step equations', y:'_y_Q3_B2Vh8'}],
+  geo:[{t:'Area of a circle', y:'ZyOhRgnFmIY'}],
+  prob:[{t:'Intro to probability', y:'uzkc-qNVoOk'}]
 };
-const khanHTML = skill => (KHAN[skill] || []).length ? `<div class="ka"><p><b>More videos from Khan Academy</b><br><small class="muted">Opens in a new tab. Come back here when you’re done.</small></p>
-  ${KHAN[skill].map(v => `<a href="${v.u}" target="_blank" rel="noopener" data-ka="${esc(v.t)}">${ICO.play}<span>${esc(v.t)}</span>${v.m ? `<small>${v.m}</small>` : ''}</a>`).join('')}</div>` : '';
+const khanHTML = skill => (KHAN[skill] || []).length ? `<div class="ka"><p><b>Watch Sal explain it</b><br><small class="muted">A Khan Academy video, right here in Encore.</small></p>
+  ${KHAN[skill].map((v, i) => `<button class="kab" data-kv="${skill}:${i}">${ICO.play}<span>${esc(v.t)}</span><small>Watch</small></button>`).join('')}</div>` : '';
+
+/* ----- the in-program video player (YouTube's player, privacy mode, covered between plays) ----- */
+let ytReady = null, ytPlayer = null, ytCur = null, ytWatched = 0, ytTick = null;
+function loadYT(){
+  if (ytReady) return ytReady;
+  ytReady = new Promise((res, rej) => {
+    if (window.YT && YT.Player) return res();
+    window.onYouTubeIframeAPIReady = () => res();
+    const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; sc.onerror = () => { ytReady = null; rej(); }; document.head.appendChild(sc);
+    setTimeout(() => rej(), 12000);
+  });
+  return ytReady;
+}
+function ytCover(kind){
+  const c = $('#ytCover'); if (!c) return;
+  if (!kind){ c.hidden = true; return; }
+  c.hidden = false;
+  c.innerHTML = kind === 'paused' ? `<div><b>Paused</b><p>Tap to keep watching</p></div>`
+    : kind === 'ended' ? `<div><b>Nice work!</b><p>Now try a challenge on your own.</p><button class="btn" id="ytAgain">Watch again</button> <button class="btn line" id="ytDone">Done</button></div>`
+    : kind === 'loading' ? `<div><b>Loading the video…</b></div>`
+    : `<div><b>This video can’t play on this computer.</b><p>The school may be blocking YouTube. Ask your teacher.</p><button class="btn line" id="ytDone">Close</button></div>`;
+  c.onclick = e => { if (kind === 'paused' && ytPlayer) ytPlayer.playVideo(); };
+  const a = $('#ytAgain'); if (a) a.onclick = e => { e.stopPropagation(); ytPlayer.seekTo(0); ytPlayer.playVideo(); };
+  const d = $('#ytDone'); if (d) d.onclick = e => { e.stopPropagation(); closeYT(); };
+}
+async function openYT(skill, i){
+  const v = KHAN[skill][i]; ytCur = {skill, v}; ytWatched = 0;
+  if (vid && vid.playing) $('#vPlay').click();
+  $('#yt').hidden = false; $('#ytTitle').textContent = v.t; ytCover('loading');
+  try{ await loadYT(); }catch(e){ ytCover('error'); return; }
+  if (ytPlayer){ try{ ytPlayer.destroy(); }catch(e){} }
+  $('#ytFrame').innerHTML = '<div id="ytInner"></div>';
+  ytPlayer = new YT.Player('ytInner', {
+    host:'https://www.youtube-nocookie.com', videoId:v.y, width:'100%', height:'100%',
+    playerVars:{rel:0, modestbranding:1, iv_load_policy:3, playsinline:1, fs:0, disablekb:0, autoplay:1, cc_load_policy:0},
+    events:{
+      onReady:e => { ytCover(null); try{ e.target.playVideo(); }catch(x){} },
+      onStateChange:e => {
+        if (e.data === YT.PlayerState.PLAYING){ ytCover(null); clearInterval(ytTick); ytTick = setInterval(() => { ytWatched++; poke(); }, 1000); }
+        else { clearInterval(ytTick); }
+        if (e.data === YT.PlayerState.PAUSED) ytCover('paused');
+        if (e.data === YT.PlayerState.ENDED){ ytCover('ended'); ytCur.done = true; }
+      },
+      onError:() => ytCover('error')
+    }
+  });
+}
+function closeYT(){
+  clearInterval(ytTick);
+  if (ytPlayer){ try{ ytPlayer.stopVideo(); ytPlayer.destroy(); }catch(e){} ytPlayer = null; }
+  $('#ytFrame').innerHTML = ''; $('#yt').hidden = true;
+  if (ytCur && ytWatched >= 5){
+    report('khan', {skill:ytCur.skill, video:ytCur.v.t, secs:ytWatched, done:!!ytCur.done});
+    if (S){ S.stats.ka = (S.stats.ka || 0) + 1; if (ytCur.done) mission('lesson'); header(); save(); }
+  }
+  ytCur = null;
+}
 
 /* ===== lesson video player ===== */
 let vid = null;
@@ -1839,7 +1905,7 @@ function playLesson(skill, after){
     <div class="vctl"><button class="btn line" id="vPrev">Back</button><button class="btn" id="vPlay">Pause</button><button class="btn line" id="vNext">Next</button>
       <button class="btn line" id="vRead" aria-pressed="${vid.read}">${vid.read ? 'Reading aloud' : 'Read aloud'}</button><button class="btn line" id="vClose">Done</button></div>
     ${khanHTML(skill)}`);
-  $$('[data-ka]').forEach(a => a.onclick = () => { if (vid && vid.playing) $('#vPlay').click(); report('khan', {skill, video:a.dataset.ka}); });
+  $$('[data-kv]').forEach(b => b.onclick = () => { const [sk, i] = b.dataset.kv.split(':'); openYT(sk, +i); });
   $('#vPrev').onclick = () => vGo(vid.i - 1);
   $('#vNext').onclick = () => vGo(vid.i + 1);
   $('#vPlay').onclick = () => { vid.playing = !vid.playing; $('#vPlay').textContent = vid.playing ? 'Pause' : 'Play'; if (vid.playing){ if (vid.i >= frames.length-1 && vid.ended) vGo(0); else vGo(vid.i); } else { clearTimeout(vid.timer); stopSpeak(); $$('#vProg i.cur b').forEach(b => b.style.animationPlayState = 'paused'); } };
@@ -1863,14 +1929,47 @@ function vGo(i){
 function vStop(){ if (vid){ clearTimeout(vid.timer); vid = null; } stopSpeak(); }
 
 /* ===== read aloud ===== */
+/* Picks the most natural MAN's voice this computer has. Women's voices are never used. */
+const MALE = /\b(male|man|guy|andrew|brian|christopher|eric|roger|steffan|davis|tony|jason|daniel|alex|aaron|fred|tom|arthur|gordon|rishi|oliver|evan|nathan|reed|rocko|thomas|david|mark|james|george|ryan|william|liam|ethan|noah|jacob|connor|mitchell|lee|neil|ralph|albert|bruce|junior|grandpa|eddy)\b/i;
+const FEMALE = /\b(female|woman|samantha|victoria|karen|moira|tessa|fiona|zira|susan|hazel|jenny|aria|sonia|libby|ava|allison|emma|serena|kate|catherine|veena|joanna|salli|kimberly|ivy|amy|olivia|natasha|clara|michelle|ana|zoe|nicky|shelley|sandy|grandma|flo|martha|kathy|princess|vicki|agnes|ellen|nora|sara|kendra|emily|jessa|monica|paulina|anna|ellie|elsa|heera)\b/i;
+let VOICE = null;
+function voiceList(){
+  if (!('speechSynthesis' in window)) return [];
+  return speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang) && !FEMALE.test(v.name) && (MALE.test(v.name)))
+    .map(v => ({v, score:(/natural|neural|online|enhanced|premium|siri/i.test(v.name) ? 20 : 0) + (/en[-_]US/i.test(v.lang) ? 4 : /en[-_]GB/i.test(v.lang) ? 3 : 1) + (/google/i.test(v.name) ? 2 : 0)}))
+    .sort((a, b) => b.score - a.score).map(x => x.v);
+}
+function pickVoice(){
+  const list = voiceList(); if (!list.length){ VOICE = null; return; }
+  const want = S && S.voice;
+  VOICE = (want && list.find(v => v.name === want)) || list[0];
+}
+if ('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+// turn math symbols and money into the words a person would say
+function sayable(t){
+  return t.replace(/\$(\d[\d,]*)\.(\d\d)\b/g, (m, d, c) => `${d} dollars${+c ? ` and ${+c} cents` : ''}`)
+    .replace(/\$(\d[\d,]*)/g, '$1 dollars').replace(/(\d)¢/g, '$1 cents').replace(/(\d)%/g, '$1 percent')
+    .replace(/−/g, ' minus ').replace(/×/g, ' times ').replace(/÷/g, ' divided by ').replace(/=/g, ' equals ')
+    .replace(/\bR (\d)/g, 'remainder $1').replace(/\s+/g, ' ').trim();
+}
+let speakQ = [];
 function speakEls(els, done){
   if (!('speechSynthesis' in window)){ toast('Reading aloud isn’t available on this computer.'); return; }
-  stopSpeak();
-  const text = els.filter(Boolean).map(el => { const c = el.cloneNode(true); c.querySelectorAll('.fr').forEach(f => f.replaceWith(` ${f.children[0].textContent} over ${f.children[1].textContent} `)); return c.textContent.replace(/−/g,' minus ').replace(/×/g,' times ').replace(/÷/g,' divided by '); }).join('. ');
-  const u = new SpeechSynthesisUtterance(text); u.rate = .95; if (done) u.onend = done;
-  speechSynthesis.speak(u);
+  stopSpeak(); if (!VOICE) pickVoice();
+  if (!VOICE){ toast('This computer doesn’t have a man’s voice installed for reading aloud. Ask your teacher.'); if (done) done(); return; }
+  const text = sayable(els.filter(Boolean).map(el => { const c = el.cloneNode(true); c.querySelectorAll('.fr').forEach(f => f.replaceWith(` ${f.children[0].textContent} over ${f.children[1].textContent} `)); return c.textContent; }).join('. '));
+  // short sentence by sentence reads more like a person (and avoids Chrome cutting off long text)
+  speakQ = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const next = () => {
+    if (!speakQ.length){ if (done) done(); return; }
+    const u = new SpeechSynthesisUtterance(speakQ.shift().trim());
+    u.voice = VOICE; u.lang = VOICE.lang; u.rate = /natural|neural|online/i.test(VOICE.name) ? 1 : .93; u.pitch = 1;
+    u.onend = () => setTimeout(next, 180); u.onerror = () => { speakQ = []; };
+    speechSynthesis.speak(u);
+  };
+  next();
 }
-function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} }
+function stopSpeak(){ speakQ = []; try{ speechSynthesis.cancel(); }catch(e){} }
 
 /* ===== scratch pad ===== */
 const pad = {erase:false, drawing:false, last:null, ctx:null};
@@ -1926,9 +2025,12 @@ function helpScreen(){
     <p><b>New skills.</b> You start with division. When you reach 3 stars and solve 6 of your last 8 on your own, the next skill unlocks: fractions, then decimals, then the bigger jobs.</p>
     <p><b>Growing.</b> Earn points to level up your company. Each skill earns up to 4 stars. Buy gear to make every job pay more, and finish your daily missions for the daily chest.</p>
     <p><b>Saving.</b> Your company saves to the school server automatically. Sign in on any Chromebook and you’ll pick up right where you left off.</p>
+    <div class="vpick"><b>Reading voice</b>${voiceList().length ? `<select id="vSel">${voiceList().map(v => `<option ${VOICE && v.name === VOICE.name ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select><button class="btn line" id="vTest">Try it</button>` : '<span class="muted">This computer has no man’s voice for reading aloud.</span>'}</div>
     <div class="acts"><button class="btn line" id="bNew">Start a new company</button><button class="btn" id="bX">Back to the game</button></div>`);
   $('#bX').onclick = closeModal;
-  $('#bNew').onclick = () => { showModal(`<h2 class="disp">Start over?</h2><p>This erases ${esc(S.company)} on this computer. Copy your save code first if you might want it back.</p><div class="acts"><button class="btn line" id="bK">Keep playing</button><button class="btn" id="bWipe">Start a new company</button></div>`); $('#bK').onclick = closeModal; $('#bWipe').onclick = welcome; };
+  if ($('#vSel')){ $('#vSel').onchange = () => { S.voice = $('#vSel').value; pickVoice(); save(); };
+    $('#vTest').onclick = () => { const d = document.createElement('p'); d.textContent = `Hi, I’m your sound crew. 84 guests at 3 tables is 28 at each table, and the job pays $12.75.`; speakEls([d]); }; }
+  $('#bNew').onclick = () => { showModal(`<h2 class="disp">Start over?</h2><p>This erases ${esc(S.company)} and all its progress. You’ll start again from the beginning.</p><div class="acts"><button class="btn line" id="bK">Keep playing</button><button class="btn" id="bWipe">Start a new company</button></div>`); $('#bK').onclick = closeModal; $('#bWipe').onclick = welcome; };
 }
 function saveScreen(){
   const code = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
@@ -1956,6 +2058,7 @@ document.addEventListener('click', e => {
 });
 $('#bHelp').onclick = () => S && helpScreen();
 $('#bOut').onclick = () => signOut();
+$('#ytClose').onclick = closeYT;
 $('#inGo').onclick = signIn;
 $('#inPin').addEventListener('keydown', e => { if (e.key === 'Enter') signIn(); });
 $('#inName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#inPin').focus(); });
