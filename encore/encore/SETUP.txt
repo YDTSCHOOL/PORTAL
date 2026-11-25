@@ -1,0 +1,26 @@
+APEX KARTS (the go-kart version of Encore) - UPDATE CHECKLIST
+Same program, same address, same database. Shlomo's progress carries over.
+
+1. SUPABASE
+   Nothing to do. The database did not change, so you do NOT need to run setup.sql again.
+
+2. GITHUB (YDTSCHOOL / PORTAL repository)
+   Add file > Upload files > drag in the whole "encore" folder > Commit.
+   It replaces the old files. The address stays the same:
+   https://ydtschool.github.io/PORTAL/encore/
+
+3. SCHOOL PORTAL
+   Nothing to change. You can rename the program to "Apex Karts" in the portal if you like.
+
+4. TEST
+   a. Sign in as Shlomo. A "Welcome to Apex Karts" screen should appear once.
+      His level, skills, stars and cash are kept. His old stage gear is now kart parts of the same value.
+   b. Start a race, answer a few, finish, then try the coin run (arrow keys to steer).
+   c. If the Chromebook still shows the old version, press Ctrl + Shift + R.
+   d. Try it without signing in: add ?demo to the end of the address (nothing is saved).
+
+GOOD TO KNOW
+   Each question is one lap. First-try answers give the biggest boost past the other karts.
+   After every race there is a short coin run where he steers the kart himself.
+   New tracks open at levels 3, 5, 7, 9 and 12.
+   Teacher view: the activity log now shows his finishing place and coin runs.
