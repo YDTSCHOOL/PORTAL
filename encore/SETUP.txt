@@ -1,29 +1,26 @@
-ENCORE (sound and stage company) - LAUNCH CHECKLIST
-A new program, separate from Margin. Saves to the SCHOOL Supabase project and uses the
-school portal sign-in, like the other programs.
+APEX KARTS 3.0 - DRIVING VERSION - INSTALL (2 steps)
 
-1. SUPABASE (your SCHOOL project)
-   SQL Editor > New query: paste ALL of setup.sql and click Run. It should say Success.
-   It only adds new tables. Safe to run again any time.
-   (If you already ran the setup.sql from earlier today, you don't need to run it again.)
+STEP 1. Put the new game online (GitHub)
+   Open this link:  https://github.com/YDTSCHOOL/PORTAL/upload/main/encore
+   Drag in ONLY the file index.html (from this folder). Click the green "Commit changes".
+   Wait 2 minutes, then open the game in an incognito window (Ctrl + Shift + N).
 
-2. GITHUB (YDTSCHOOL / PORTAL repository)
-   Add file > Upload files > drag in the whole "encore" folder > Commit.
-   After a minute or two the address will be:
-   https://ydtschool.github.io/PORTAL/encore/
+STEP 2. Turn on the teacher race settings (Supabase, one time)
+   Open the SCHOOL project in Supabase > SQL Editor > New query.
+   Open race-settings.sql, copy everything, paste, and click Run.
+   (Skip this and the game still works. Every student just gets the starting settings.)
 
-3. SCHOOL PORTAL
-   Add a program called Encore with that address, and tick it for Shlomo.
-   You can untick or remove Margin for him.
+TEACHER SETTINGS (Teacher view, at the bottom of the sign-in page)
+   For each student: challenges per pit stop (1-3), laps per race (2-6),
+   lap length (short / medium / long), driving help (on / off), coin run bonus (on / off).
+   It shows an estimated "math share". Starting point: 1 per pit stop, medium laps = about half.
+   Changes take effect the next time he signs in.
 
-4. TEST
-   a. Sign in with Shlomo's portal first name and PIN. Name a company, solve a few challenges.
-   b. Sign out, then sign in on a DIFFERENT Chromebook. Everything should be where he left it.
-   c. On the sign-in screen click Teacher and enter your portal password to see his progress.
-   d. If you tested with his account, press Reset in the Teacher view so he starts fresh.
+HOW THE GAME WORKS NOW
+   Before each race: a qualifying challenge decides where he starts.
+   He drives every lap himself. Each lap ends in a pit stop with a challenge (or more).
+   The race waits while he thinks. First-try answers = the fastest stop + nitro.
+   Race types: Grand Prix, Knockout, Time trial. Rivals: Rookie, Pro, Champion (level 4).
+   A short "How to race" tutorial plays before his first race. It's also under How to play.
 
-GOOD TO KNOW
-   Saves to the server automatically after every answer. "Saved" shows at the top.
-   Signs out after 20 minutes without activity. His work is already saved.
-   Daily lock: off to start. Turn it on in the Teacher view if you want set hours.
-   Try it without signing in: add ?demo to the end of the address (nothing is saved).
+Shlomo's level, skills, stars, cash and parts all carry over. setup.sql does NOT need to be run again.
