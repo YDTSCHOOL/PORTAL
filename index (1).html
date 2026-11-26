@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== SETTINGS: the only lines you might ever change ===== */
+/* (Your Supabase address and key are in the script near the bottom.) */
+
+:root{
+  --steel:#E6EBF0; --panel:#FFFFFF; --ink:#16202A; --muted:#5B6976;
+  --line:#C9D2DB; --signal:#F4B400; --signal-dark:#C98F00; --blue:#1F4FD8;
+  --bad:#B42318; --good:#0F7B4A;
+  --cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",Arial,Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--steel);color:var(--ink);font:500 17px/1.45 var(--body);}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.hidden{display:none !important}
+
+/* ---- layout ---- */
+.screen{min-height:100%;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;background:var(--ink);color:#fff;border-bottom:6px solid var(--signal)}
+.brand{font:700 26px/1 var(--cond);letter-spacing:.02em}
+.clock{font:600 22px/1 var(--cond);color:#DCE3EA;font-variant-numeric:tabular-nums}
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+
+/* ---- sign in ---- */
+.signin{display:grid;grid-template-columns:1fr 380px;gap:48px;align-items:center;
+  width:100%;max-width:920px}
+.hello h1{font:700 clamp(46px,7vw,86px)/.92 var(--cond);margin:0 0 14px;letter-spacing:-.01em}
+.hello p{margin:0;color:var(--muted);font-size:19px;max-width:30ch}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px 26px 22px;
+  box-shadow:0 2px 0 var(--line)}
+label{display:block;font:600 15px/1.2 var(--body);margin:0 0 6px}
+.field{margin-bottom:16px}
+input[type=text],input[type=password],input[type=url],input[type=number]{
+  width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:4px;background:#fff;font-size:20px}
+input:focus{border-color:var(--blue);outline:none}
+.pin{letter-spacing:.5em;font-variant-numeric:tabular-nums}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:4px;
+  padding:13px 22px;font:700 21px/1 var(--cond);letter-spacing:.03em;cursor:pointer;
+  background:var(--signal);color:var(--ink);box-shadow:0 3px 0 var(--signal-dark)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--signal-dark)}
+.btn[disabled]{opacity:.55;cursor:wait}
+.btn.wide{width:100%}
+.btn.plain{background:#fff;border:2px solid var(--line);box-shadow:none;font-size:18px;padding:10px 16px}
+.btn.small{font-size:16px;padding:8px 12px}
+.btn.danger{background:#fff;border:2px solid #E7B4AE;color:var(--bad);box-shadow:none}
+.msg{min-height:24px;margin:12px 0 0;font-weight:600}
+.msg.bad{color:var(--bad)} .msg.good{color:var(--good)}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:4px}
+.foot{padding:10px 28px;display:flex;justify-content:flex-end}
+
+/* ---- program choice ---- */
+.choose{width:100%;max-width:980px}
+.choose h1{font:700 clamp(40px,6vw,68px)/.95 var(--cond);margin:0 0 6px}
+.choose .sub{color:var(--muted);margin:0 0 26px;font-size:19px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:14px;text-align:left;
+  background:var(--panel);border:2px solid var(--line);border-left:10px solid var(--signal);border-radius:4px;
+  padding:20px;cursor:pointer;min-height:132px;text-decoration:none;color:var(--ink)}
+.tile:hover{border-color:var(--ink);border-left-color:var(--signal)}
+.tile .ic{font-size:36px;line-height:1}
+.tile .nm{font:700 27px/1.05 var(--cond)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.going{text-align:center}
+.going h1{font:700 clamp(40px,6vw,72px)/1 var(--cond);margin:0 0 10px}
+.going .ic{font-size:64px}
+
+/* ---- teacher ---- */
+.teacher{width:100%;max-width:1000px;align-self:flex-start}
+.tabs{display:flex;gap:4px;border-bottom:3px solid var(--ink);margin:0 0 20px}
+.tab{background:none;border:0;padding:10px 18px;font:700 21px/1 var(--cond);cursor:pointer;color:var(--muted);
+  border-radius:4px 4px 0 0}
+.tab[aria-selected=true]{background:var(--ink);color:#fff}
+.tbl{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line)}
+.tbl th,.tbl td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl th{font:600 15px/1.2 var(--body);color:var(--muted);background:#F4F6F8}
+.tbl td.act{white-space:nowrap;text-align:right}
+.url{color:var(--muted);font-size:15px;word-break:break-all}
+.tag{display:inline-block;background:#FDECEA;color:var(--bad);font-size:13px;font-weight:600;padding:2px 8px;border-radius:10px}
+.form{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--signal);padding:18px;margin-top:18px;border-radius:4px}
+.form h3{font:700 24px/1 var(--cond);margin:0 0 14px}
+.grid2{display:grid;grid-template-columns:90px 1fr 1.5fr 90px;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 160px;gap:12px}
+.checks{display:flex;flex-wrap:wrap;gap:8px 18px;margin:4px 0 14px}
+.checks label{display:flex;gap:8px;align-items:center;font-weight:500;margin:0;cursor:pointer}
+.checks input{width:20px;height:20px}
+.empty{padding:18px;background:var(--panel);border:1px dashed var(--line);color:var(--muted)}
+.hint{color:var(--muted);font-size:15px;margin:4px 0 0}
+.scroll{overflow-x:auto}
+
+@media (max-width:760px){
+  .signin{grid-template-columns:1fr;gap:20px}
+  .hello h1{font-size:48px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .topbar{padding:12px 16px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .going .ic{animation:pulse 1s ease-in-out infinite alternate}
+  @keyframes pulse{to{transform:translateY(-6px)}}
+}
+</style>
+</head>
+<body>
+
+<div class="screen">
+  <header class="topbar">
+    <div class="brand" id="brand">Learning Portal</div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <main>
+    <!-- STUDENT SIGN IN -->
+    <section id="sSignin" class="signin">
+      <div class="hello">
+        <h1 id="greet">Good morning.</h1>
+        <p>Sign in with your first name and your 4-digit PIN to open your programs.</p>
+      </div>
+      <form class="card" id="signinForm" autocomplete="off">
+        <div class="field">
+          <label for="sName">First name</label>
+          <input type="text" id="sName" autocomplete="off" autocapitalize="words" spellcheck="false" required>
+        </div>
+        <div class="field">
+          <label for="sPin">PIN</label>
+          <input type="password" id="sPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off" required>
+        </div>
+        <button class="btn wide" id="signinBtn" type="submit">Sign in</button>
+        <p class="msg bad" id="signinMsg" role="alert"></p>
+      </form>
+    </section>
+
+    <!-- PROGRAM CHOICE -->
+    <section id="sChoose" class="choose hidden">
+      <h1 id="chooseTitle"></h1>
+      <p class="sub">Pick a program.</p>
+      <div class="tiles" id="tiles"></div>
+      <div class="row" style="margin-top:24px">
+        <button class="btn plain" id="signoutBtn" type="button">Not you? Sign out</button>
+      </div>
+    </section>
+
+    <!-- OPENING ONE PROGRAM -->
+    <section id="sGoing" class="going hidden">
+      <div class="ic" id="goingIc"></div>
+      <h1 id="goingTitle"></h1>
+      <p class="sub" id="goingSub" style="color:var(--muted)"></p>
+    </section>
+
+    <!-- TEACHER SIGN IN -->
+    <section id="sTeacherIn" class="signin hidden">
+      <div class="hello">
+        <h1 id="tTitle">Teacher</h1>
+        <p id="tIntro">Enter the teacher password to manage programs and students.</p>
+      </div>
+      <form class="card" id="teacherForm" autocomplete="off">
+        <div class="field">
+          <label for="tPass">Teacher password</label>
+          <input type="password" id="tPass" autocomplete="off" required>
+        </div>
+        <div class="field hidden" id="tPass2Wrap">
+          <label for="tPass2">Type it again</label>
+          <input type="password" id="tPass2" autocomplete="off">
+        </div>
+        <button class="btn wide" id="teacherBtn" type="submit">Continue</button>
+        <p class="msg bad" id="teacherMsg" role="alert"></p>
+        <button class="linkbtn" type="button" data-go="student">Back to student sign-in</button>
+      </form>
+    </section>
+
+    <!-- TEACHER AREA -->
+    <section id="sTeacher" class="teacher hidden">
+      <div class="row" style="justify-content:space-between;margin-bottom:14px">
+        <h1 style="font:700 44px/1 var(--cond);margin:0">Portal setup</h1>
+        <div class="row">
+          <button class="btn plain small" id="changePassBtn" type="button">Change teacher password</button>
+          <button class="btn plain small" type="button" data-go="student">Leave teacher mode</button>
+        </div>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="students" aria-selected="true">Students</button>
+        <button class="tab" role="tab" data-tab="programs" aria-selected="false">Programs</button>
+        <button class="tab" role="tab" data-tab="log" aria-selected="false">Sign-ins</button>
+      </div>
+      <p class="msg" id="adminMsg" role="status"></p>
+
+      <!-- Students tab -->
+      <div id="tabStudents">
+        <div id="studentList"></div>
+        <form class="form" id="studentForm" autocomplete="off">
+          <h3 id="studentFormTitle">Add a student</h3>
+          <div class="grid3">
+            <div class="field"><label for="fsName">First name</label>
+              <input type="text" id="fsName" autocomplete="off" required>
+              <p class="hint">Two boys with the same name? Add a last initial, like Moshe K.</p></div>
+            <div class="field"><label for="fsPin">4-digit PIN</label>
+              <input type="text" id="fsPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off">
+              <p class="hint" id="fsPinHint">Required.</p></div>
+          </div>
+          <label>Programs he can open</label>
+          <div class="checks" id="fsChecks"></div>
+          <div class="row">
+            <button class="btn" type="submit" id="fsSave">Save student</button>
+            <button class="btn plain" type="button" id="fsCancel">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Programs tab -->
+      <div id="tabPrograms" class="hidden">
+        <div id="programList"></div>
+        <form class="form" id="programForm" autocomplete="off">
+          <h3 id="programFormTitle">Add a program</h3>
+          <div class="grid2">
+            <div class="field"><label for="fpIcon">Icon</label>
+              <input type="text" id="fpIcon" maxlength="4" placeholder="📘"></div>
+            <div class="field"><label for="fpName">Name</label>
+              <input type="text" id="fpName" required placeholder="The Workshop"></div>
+            <div class="field"><label for="fpUrl">Link</label>
+              <input type="text" id="fpUrl" required placeholder="https://lockandload123.netlify.app/"></div>
+            <div class="field"><label for="fpSort">Order</label>
+              <input type="number" id="fpSort" value="0"></div>
+          </div>
+          <p class="hint" style="margin:-6px 0 14px">Copy the link from the address bar while the program is open, and paste it here.</p>
+          <div class="row">
+            <button class="btn" type="submit" id="fpSave">Save program</button>
+            <button class="btn plain" type="button" id="fpCancel">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Log tab -->
+      <div id="tabLog" class="hidden"><div id="logList"></div></div>
+    </section>
+  </main>
+
+  <div class="foot" id="foot"><button class="linkbtn" type="button" data-go="teacher">Teacher</button></div>
+</div>
+
+<script>
+/* ===== YOUR SUPABASE PROJECT (SCHOOL) ===== */
+var SUPABASE_URL = "https://belathxxgwayxdmiqvpd.supabase.co";
+var SUPABASE_KEY = "sb_publishable_Kxuxi919RbsmEk-p8iNt-w_zm6BsRI9";
+var IDLE_SECONDS = 90;   // the program list signs out by itself after this long
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function fixUrl(u){ u = (u || "").trim(); if (u && !/^https?:\/\//i.test(u)) u = "https://" + u; return u; }
+
+async function rpc(fn, args){
+  var r;
+  try {
+    r = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + fn, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY,
+                 "Authorization": "Bearer " + SUPABASE_KEY },
+      body: JSON.stringify(args || {})
+    });
+  } catch (e) {
+    throw new Error("No internet connection. Check the Wi-Fi and try again.");
+  }
+  var text = await r.text(), data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (e) {}
+  if (!r.ok) {
+    var m = (data && (data.message || data.hint)) || ("Server error " + r.status);
+    if (/could not find the function|schema cache/i.test(m))
+      m = "The portal isn't set up in Supabase yet. Run portal_setup.sql first.";
+    throw new Error(m);
+  }
+  return data;
+}
+
+var screens = ["sSignin","sChoose","sGoing","sTeacherIn","sTeacher"];
+function show(id){
+  screens.forEach(function(s){ $(s).classList.toggle("hidden", s !== id); });
+  $("foot").classList.toggle("hidden", id !== "sSignin");
+}
+
+/* ---------- clock & greeting ---------- */
+function tick(){
+  var d = new Date(), h = d.getHours();
+  $("clock").textContent = d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}) +
+    "   " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
+  $("greet").textContent = h < 12 ? "Good morning." : h < 17 ? "Good afternoon." : "Good evening.";
+}
+tick(); setInterval(tick, 15000);
+
+/* ---------- student flow ---------- */
+var idleTimer = null;
+function resetIdle(){
+  clearTimeout(idleTimer);
+  if (!$("sChoose").classList.contains("hidden")) idleTimer = setTimeout(signOut, IDLE_SECONDS * 1000);
+}
+["click","keydown","mousemove","touchstart"].forEach(function(ev){ document.addEventListener(ev, resetIdle, {passive:true}); });
+
+function signOut(){
+  clearTimeout(idleTimer);
+  $("tiles").innerHTML = "";
+  $("sName").value = ""; $("sPin").value = ""; $("signinMsg").textContent = "";
+  show("sSignin"); $("sName").focus();
+}
+$("signoutBtn").onclick = signOut;
+
+$("sPin").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); });
+
+$("signinForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  var name = $("sName").value.trim(), pin = $("sPin").value.trim(), msg = $("signinMsg");
+  msg.textContent = "";
+  if (!name) { msg.textContent = "Type your first name."; return; }
+  if (!/^\d{4}$/.test(pin)) { msg.textContent = "Your PIN is 4 numbers."; return; }
+  $("signinBtn").disabled = true;
+  try {
+    var res = await rpc("portal_login", { p_name: name, p_pin: pin });
+    if (!res || !res.ok) {
+      var err = res && res.error;
+      msg.textContent = err === "name" ? "That name isn't on the list. Check the spelling or ask your teacher."
+                      : err === "locked" ? "Too many wrong PINs. Wait 5 minutes, or ask your teacher to reset it."
+                      : "That PIN doesn't match. Try again.";
+      $("sPin").value = ""; $("sPin").focus();
+      return;
+    }
+    openFor(res);
+  } catch (err) {
+    msg.textContent = err.message;
+  } finally {
+    $("signinBtn").disabled = false;
+  }
+});
+
+function openFor(res){
+  var progs = res.programs || [];
+  if (progs.length === 0) {
+    $("signinMsg").textContent = "No programs are set up for you yet. Ask your teacher.";
+    return;
+  }
+  if (progs.length === 1) {
+    var p = progs[0];
+    $("goingIc").textContent = p.icon || "📘";
+    $("goingTitle").textContent = "Opening " + p.name;
+    $("goingSub").textContent = "Hi " + res.name + ". One moment.";
+    show("sGoing");
+    setTimeout(function(){ location.href = fixUrl(p.url); }, 900);
+    return;
+  }
+  $("chooseTitle").textContent = "Hi, " + res.name + ".";
+  $("tiles").innerHTML = progs.map(function(p){
+    return '<a class="tile" href="' + esc(fixUrl(p.url)) + '"><span class="ic">' + esc(p.icon || "📘") +
+           '</span><span class="nm">' + esc(p.name) + '</span></a>';
+  }).join("");
+  show("sChoose"); resetIdle();
+  var first = document.querySelector(".tile"); if (first) first.focus();
+}
+
+/* ---------- teacher sign in ---------- */
+var adminPass = null, adminIsNew = false, changingPass = false, data = {programs:[],students:[],log:[]};
+
+document.addEventListener("click", function(e){
+  var g = e.target.closest("[data-go]"); if (!g) return;
+  if (g.dataset.go === "teacher") openTeacher(false);
+  else { adminPass = null; location.hash = ""; signOut(); }
+});
+
+async function openTeacher(change){
+  changingPass = change;
+  $("tPass").value = ""; $("tPass2").value = ""; $("teacherMsg").textContent = "";
+  show("sTeacherIn");
+  if (change) {
+    adminIsNew = false;
+    $("tTitle").textContent = "New password";
+    $("tIntro").textContent = "Choose a new teacher password, at least 6 characters.";
+    $("tPass2Wrap").classList.remove("hidden");
+    $("teacherBtn").textContent = "Save new password";
+    $("tPass").focus(); return;
+  }
+  $("tTitle").textContent = "Teacher";
+  $("tIntro").textContent = "Checking setup…";
+  $("tPass2Wrap").classList.add("hidden");
+  $("teacherBtn").textContent = "Continue";
+  try {
+    var st = await rpc("portal_status");
+    adminIsNew = !st.admin_set;
+  } catch (err) { $("tIntro").textContent = ""; $("teacherMsg").textContent = err.message; return; }
+  if (adminIsNew) {
+    $("tTitle").textContent = "First-time setup";
+    $("tIntro").textContent = "Create a teacher password, at least 6 characters. You'll use it to add programs and students. Keep it private.";
+    $("tPass2Wrap").classList.remove("hidden");
+    $("teacherBtn").textContent = "Create password";
+  } else {
+    $("tIntro").textContent = "Enter the teacher password to manage programs and students.";
+  }
+  $("tPass").focus();
+}
+$("changePassBtn").onclick = function(){ openTeacher(true); };
+
+$("teacherForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  var p = $("tPass").value, p2 = $("tPass2").value, msg = $("teacherMsg");
+  msg.textContent = "";
+  $("teacherBtn").disabled = true;
+  try {
+    if (adminIsNew || changingPass) {
+      if (p.length < 6) throw new Error("Use at least 6 characters.");
+      if (p !== p2) throw new Error("The two passwords don't match.");
+      await rpc("portal_set_admin", { p_new: p, p_old: changingPass ? adminPass : null });
+      adminPass = p; changingPass = false;
+    } else {
+      var ok = await rpc("portal_admin_check", { p_pass: p });
+      if (!ok) throw new Error("That password is wrong.");
+      adminPass = p;
+    }
+    await loadAdmin();
+    show("sTeacher");
+  } catch (err) { msg.textContent = err.message; }
+  finally { $("teacherBtn").disabled = false; }
+});
+
+/* ---------- teacher area ---------- */
+function say(text, good){ var m = $("adminMsg"); m.textContent = text; m.className = "msg " + (good ? "good" : "bad"); }
+
+async function loadAdmin(){
+  data = await rpc("portal_admin_data", { p_pass: adminPass });
+  renderStudents(); renderPrograms(); renderLog();
+}
+
+document.querySelectorAll(".tab").forEach(function(t){
+  t.onclick = function(){
+    document.querySelectorAll(".tab").forEach(function(x){ x.setAttribute("aria-selected", x === t); });
+    $("tabStudents").classList.toggle("hidden", t.dataset.tab !== "students");
+    $("tabPrograms").classList.toggle("hidden", t.dataset.tab !== "programs");
+    $("tabLog").classList.toggle("hidden", t.dataset.tab !== "log");
+    say("");
+  };
+});
+
+function progName(id){ var p = data.programs.find(function(x){ return x.id === id; }); return p ? (p.icon + " " + p.name) : null; }
+
+function renderStudents(){
+  var el = $("studentList");
+  if (!data.students.length) {
+    el.innerHTML = '<div class="empty">No students yet. Add programs first, then add each boy below with a PIN.</div>';
+  } else {
+    el.innerHTML = '<div class="scroll"><table class="tbl"><thead><tr><th>Name</th><th>Programs</th><th></th></tr></thead><tbody>' +
+      data.students.map(function(s){
+        var names = (s.programs || []).map(progName).filter(Boolean);
+        return '<tr><td><strong>' + esc(s.name) + '</strong> ' + (s.locked ? '<span class="tag">Locked</span>' : '') + '</td>' +
+          '<td>' + (names.length ? esc(names.join(", ")) : '<span style="color:var(--muted)">None</span>') + '</td>' +
+          '<td class="act"><button class="btn plain small" data-edit-s="' + s.id + '">Edit</button> ' +
+          '<button class="btn danger small" data-del-s="' + s.id + '">Remove</button></td></tr>';
+      }).join("") + '</tbody></table></div>';
+  }
+  renderChecks([]);
+}
+
+function renderChecks(selected){
+  var box = $("fsChecks");
+  if (!data.programs.length) { box.innerHTML = '<span class="hint">Add programs in the Programs tab first.</span>'; return; }
+  box.innerHTML = data.programs.map(function(p){
+    return '<label><input type="checkbox" value="' + p.id + '"' + (selected.indexOf(p.id) >= 0 ? " checked" : "") +
+           '> ' + esc(p.icon + " " + p.name) + '</label>';
+  }).join("");
+}
+
+var editingStudent = null;
+function clearStudentForm(){
+  editingStudent = null;
+  $("studentFormTitle").textContent = "Add a student";
+  $("fsName").value = ""; $("fsPin").value = "";
+  $("fsPinHint").textContent = "Required.";
+  renderChecks([]);
+}
+$("fsCancel").onclick = clearStudentForm;
+$("fsPin").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); });
+
+$("studentList").addEventListener("click", async function(e){
+  var ed = e.target.closest("[data-edit-s]"), del = e.target.closest("[data-del-s]");
+  if (ed) {
+    var s = data.students.find(function(x){ return x.id === ed.dataset.editS; });
+    editingStudent = s.id;
+    $("studentFormTitle").textContent = "Edit " + s.name;
+    $("fsName").value = s.name; $("fsPin").value = "";
+    $("fsPinHint").textContent = "Leave blank to keep his PIN. Saving also unlocks him.";
+    renderChecks(s.programs || []);
+    $("fsName").focus();
+  }
+  if (del) {
+    var s2 = data.students.find(function(x){ return x.id === del.dataset.delS; });
+    if (!confirm("Remove " + s2.name + " from the portal? His progress inside each program is not affected.")) return;
+    try { await rpc("portal_delete_student", { p_pass: adminPass, p_id: s2.id }); await loadAdmin(); clearStudentForm(); say(s2.name + " removed.", true); }
+    catch (err) { say(err.message); }
+  }
+});
+
+$("studentForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  var pin = $("fsPin").value.trim();
+  if (pin && !/^\d{4}$/.test(pin)) { say("The PIN must be exactly 4 digits."); return; }
+  var progs = Array.prototype.map.call($("fsChecks").querySelectorAll("input:checked"), function(c){ return c.value; });
+  $("fsSave").disabled = true;
+  try {
+    await rpc("portal_save_student", { p_pass: adminPass, p_id: editingStudent, p_name: $("fsName").value,
+                                       p_pin: pin || null, p_programs: progs });
+    var nm = $("fsName").value.trim();
+    await loadAdmin(); clearStudentForm(); say(nm + " saved.", true); $("fsName").focus();
+  } catch (err) { say(err.message); }
+  finally { $("fsSave").disabled = false; }
+});
+
+function renderPrograms(){
+  var el = $("programList");
+  if (!data.programs.length) {
+    el.innerHTML = '<div class="empty">No programs yet. Add each program below with its link.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="scroll"><table class="tbl"><thead><tr><th>Program</th><th>Link</th><th>Order</th><th></th></tr></thead><tbody>' +
+    data.programs.map(function(p){
+      return '<tr><td><strong>' + esc(p.icon + " " + p.name) + '</strong></td>' +
+        '<td class="url"><a href="' + esc(fixUrl(p.url)) + '" target="_blank" rel="noopener">' + esc(p.url) + '</a></td>' +
+        '<td>' + esc(p.sort) + '</td>' +
+        '<td class="act"><button class="btn plain small" data-edit-p="' + p.id + '">Edit</button> ' +
+        '<button class="btn danger small" data-del-p="' + p.id + '">Remove</button></td></tr>';
+    }).join("") + '</tbody></table></div>';
+}
+
+var editingProgram = null;
+function clearProgramForm(){
+  editingProgram = null;
+  $("programFormTitle").textContent = "Add a program";
+  $("fpIcon").value = ""; $("fpName").value = ""; $("fpUrl").value = ""; $("fpSort").value = data.programs.length + 1;
+}
+$("fpCancel").onclick = clearProgramForm;
+
+$("programList").addEventListener("click", async function(e){
+  var ed = e.target.closest("[data-edit-p]"), del = e.target.closest("[data-del-p]");
+  if (ed) {
+    var p = data.programs.find(function(x){ return x.id === ed.dataset.editP; });
+    editingProgram = p.id;
+    $("programFormTitle").textContent = "Edit " + p.name;
+    $("fpIcon").value = p.icon; $("fpName").value = p.name; $("fpUrl").value = p.url; $("fpSort").value = p.sort;
+    $("fpName").focus();
+  }
+  if (del) {
+    var p2 = data.programs.find(function(x){ return x.id === del.dataset.delP; });
+    if (!confirm("Remove " + p2.name + " from the portal? Students will no longer see it here. The program itself is not deleted.")) return;
+    try { await rpc("portal_delete_program", { p_pass: adminPass, p_id: p2.id }); await loadAdmin(); clearProgramForm(); say(p2.name + " removed.", true); }
+    catch (err) { say(err.message); }
+  }
+});
+
+$("programForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  var url = fixUrl($("fpUrl").value);
+  $("fpSave").disabled = true;
+  try {
+    await rpc("portal_save_program", { p_pass: adminPass, p_id: editingProgram, p_name: $("fpName").value,
+      p_url: url, p_icon: $("fpIcon").value, p_sort: parseInt($("fpSort").value, 10) || 0 });
+    var nm = $("fpName").value.trim();
+    await loadAdmin(); clearProgramForm(); say(nm + " saved.", true); $("fpName").focus();
+  } catch (err) { say(err.message); }
+  finally { $("fpSave").disabled = false; }
+});
+
+function renderLog(){
+  var el = $("logList");
+  if (!data.log.length) { el.innerHTML = '<div class="empty">No one has signed in through the portal yet.</div>'; return; }
+  el.innerHTML = '<p class="hint" style="margin:0 0 10px">The last 300 portal sign-ins. What each boy does inside a program shows on that program\'s own dashboard.</p>' +
+    '<div class="scroll"><table class="tbl"><thead><tr><th>When</th><th>Student</th></tr></thead><tbody>' +
+    data.log.map(function(l){
+      var d = new Date(l.at);
+      return '<tr><td>' + esc(d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}) + ", " +
+        d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})) + '</td><td>' + esc(l.name) + '</td></tr>';
+    }).join("") + '</tbody></table></div>';
+}
+
+/* ---------- start ---------- */
+if (location.hash === "#teacher") openTeacher(false); else { show("sSignin"); $("sName").focus(); }
+</script>
+</body>
+</html>
