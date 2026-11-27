@@ -511,7 +511,7 @@ $("studentList").addEventListener("click", async function(e){
   if (del) {
     var s2 = data.students.find(function(x){ return x.id === del.dataset.delS; });
     if (!confirm("Remove " + s2.name + "? They will not be able to sign in to the portal or Sketchbook. Their saved work inside each program stays.")) return;
-    try { await rpc("portal_remove_student", { p_pass: adminPass, p_id: s2.id }); await loadAdmin(); clearStudentForm(); say(s2.name + " removed.", true); }
+    try { await rpc("portal_delete_student", { p_pass: adminPass, p_id: s2.id }); await loadAdmin(); clearStudentForm(); say(s2.name + " removed.", true); }
     catch (err) { say(err.message); }
   }
 });

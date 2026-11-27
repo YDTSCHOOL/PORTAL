@@ -10,8 +10,13 @@
 --   * Turns on Row Level Security and removes all direct access for the public (anon) key on the
 --     student tables. Everything goes through the functions below, which check the code or the
 --     teacher password inside Supabase. The teacher password is the portal's (stored as a hash).
---   * Keeps every student's Sketchbook progress. Each existing Sketchbook student is linked to the
---     portal student with the same name, or added to the portal with the same code they already use.
+--   * Keeps every student's Sketchbook progress. Each existing Sketchbook student is added to the portal
+--     as a NEW, separate student with the code they already use. It never links Sketchbook progress to
+--     an existing portal student by name. The Sketchbook student "Chavi" (Chavi Greenes) becomes
+--     "Chavi G." so she stays separate from the portal's other Chavi.
+--   * Changes only Sketchbook's own tables. The portal's tables (portal_students, portal_programs,
+--     portal_admin, portal_log) and every other program's tables and functions are left as they are;
+--     it only adds rows to portal_students/portal_programs.
 --   * Adds a Sketchbook button to the portal if there isn't one yet.
 --
 -- At the end you get a small table showing what happened to each Sketchbook student.
@@ -39,27 +44,21 @@ create table if not exists public.sketchbook_sessions (
 );
 
 ------------------------------------------------------------------------------------------------
--- 2. Lock the tables: Row Level Security on, no policies, no direct access for anon/authenticated
+-- 2. Lock Sketchbook's tables: Row Level Security on, no policies, no direct access for anon/authenticated.
+--    (The portal's tables already give the public key no access, and are not changed here.)
 ------------------------------------------------------------------------------------------------
 drop policy if exists "sketchbook app access" on public.sketchbook_students;
-do $$
-declare t text;
-begin
-  foreach t in array array['sketchbook_students','sketchbook_sessions',
-                           'portal_students','portal_programs','portal_admin','portal_log'] loop
-    if to_regclass('public.' || t) is not null then
-      execute format('alter table public.%I enable row level security', t);
-      execute format('revoke all on public.%I from anon, authenticated', t);
-    end if;
-  end loop;
-end $$;
+alter table public.sketchbook_students enable row level security;
+alter table public.sketchbook_sessions enable row level security;
+revoke all on public.sketchbook_students from anon, authenticated;
+revoke all on public.sketchbook_sessions from anon, authenticated;
 
 ------------------------------------------------------------------------------------------------
 -- 3. Helpers (not callable from the web page)
 ------------------------------------------------------------------------------------------------
 create or replace function public._sketch_norm(t text) returns text
 language sql immutable as $$
-  select lower(regexp_replace(trim(coalesce(t, '')), '\s+', ' ', 'g'))
+  select lower(regexp_replace(trim(replace(coalesce(t, ''), '.', '')), '\s+', ' ', 'g'))
 $$;
 
 create or replace function public._sketch_program_id() returns uuid
@@ -210,17 +209,6 @@ begin
   return json_build_object('ok', true);
 end $$;
 
--- Remove a student from the list. Their saved Sketchbook progress is kept in the database.
-create or replace function public.portal_remove_student(p_pass text, p_id uuid) returns json
-language plpgsql security definer set search_path = public, extensions as $$
-begin
-  perform public._sketch_admin(p_pass);
-  delete from public.sketchbook_sessions where student_id = p_id;
-  delete from public.portal_students where id = p_id;
-  if not found then raise exception 'That student is not on the list.'; end if;
-  return json_build_object('ok', true);
-end $$;
-
 grant execute on function public.sketch_login(text, text) to anon, authenticated;
 grant execute on function public.sketch_save(uuid, jsonb) to anon, authenticated;
 grant execute on function public.sketch_signout(uuid) to anon, authenticated;
@@ -229,7 +217,6 @@ grant execute on function public.sketch_admin_list(text) to anon, authenticated;
 grant execute on function public.sketch_admin_save(text, uuid, jsonb) to anon, authenticated;
 grant execute on function public.portal_add_student(text, text, text, text, uuid[]) to anon, authenticated;
 grant execute on function public.portal_set_code(text, uuid, text) to anon, authenticated;
-grant execute on function public.portal_remove_student(text, uuid) to anon, authenticated;
 
 ------------------------------------------------------------------------------------------------
 -- 6. Move existing Sketchbook students onto the portal list (keeps all progress and their codes)
@@ -239,7 +226,7 @@ create temp table sketch_report(student text, result text);
 
 do $$
 declare
-  pid uuid; r record; s record; nm text; code text; i int; sid uuid;
+  pid uuid; r record; nm text; code text; i int; sid uuid;
 begin
   perform set_config('search_path', 'public, extensions', true);
 
@@ -253,34 +240,31 @@ begin
     insert into sketch_report values ('(portal)', 'Added the Sketchbook button to the portal');
   end if;
 
+  -- Every existing Sketchbook student becomes a NEW portal student. Nobody is linked by name.
   for r in select * from public.sketchbook_students where student_id is null loop
     nm := regexp_replace(trim(coalesce(nullif(r.data->>'name', ''), r.username)), '\s+', ' ', 'g');
-    select * into s from public.portal_students
-      where public._sketch_norm(name) = public._sketch_norm(nm) limit 1;
-    if found then
-      sid := s.id;
-      if not (pid = any(coalesce(s.programs, '{}'::uuid[]))) then
-        update public.portal_students set programs = array_append(coalesce(programs, '{}'::uuid[]), pid) where id = sid;
-      end if;
-      insert into sketch_report values (s.name, 'Linked to the portal student with this name. Signs in with their PORTAL code.');
-    else
-      -- Find their existing Sketchbook code from the old hash, so it keeps working.
-      code := null;
-      if r.pin is not null then
-        for i in 0..9999 loop
-          if encode(digest('sketchbook|' || r.username || '|' || lpad(i::text, 4, '0'), 'sha256'), 'hex') = r.pin then
-            code := lpad(i::text, 4, '0'); exit;
-          end if;
-        end loop;
-      end if;
-      sid := gen_random_uuid();
-      insert into public.portal_students(id, name, pin_hash, programs, fails)
-        values (sid, nm, case when code is null then null else crypt(code, gen_salt('bf')) end, array[pid], 0);
-      insert into sketch_report values (nm, case when code is null
-        then 'Added to the portal. Could not read the old code: use Set a new code.'
-        else 'Added to the portal with Sketchbook. Keeps the same code as before.' end);
+    if r.username = 'chavi' then nm := 'Chavi G.'; end if;   -- Chavi Greenes, not the portal's Chavi
+    if exists (select 1 from public.portal_students where public._sketch_norm(name) = public._sketch_norm(nm)) then
+      nm := nm || ' (Sketchbook)';
     end if;
-    update public.sketchbook_students set student_id = sid, pin = null where username = r.username;
+    -- Find their existing Sketchbook code from the old hash, so it keeps working.
+    code := null;
+    if r.pin is not null then
+      for i in 0..9999 loop
+        if encode(digest('sketchbook|' || r.username || '|' || lpad(i::text, 4, '0'), 'sha256'), 'hex') = r.pin then
+          code := lpad(i::text, 4, '0'); exit;
+        end if;
+      end loop;
+    end if;
+    sid := gen_random_uuid();
+    insert into public.portal_students(id, name, pin_hash, programs, fails)
+      values (sid, nm, case when code is null then null else crypt(code, gen_salt('bf')) end, array[pid], 0);
+    update public.sketchbook_students
+      set student_id = sid, pin = null, data = jsonb_set(data, '{name}', to_jsonb(nm))
+      where username = r.username;
+    insert into sketch_report values (nm, case when code is null
+      then 'New portal student with Sketchbook. Could not read the old code: use Set a new code.'
+      else 'New portal student with Sketchbook and all progress. Keeps the same code as before.' end);
   end loop;
 
   if not exists (select 1 from sketch_report) then

@@ -760,7 +760,7 @@ async function setCode(r) {
 }
 async function removeStudent(r) {
   if (!confirm(`Remove ${r.name}? They will not be able to sign in to Sketchbook or the portal. Their saved Sketchbook work stays in the database.`)) return;
-  try { await rpc('portal_remove_student', { p_pass: ADMIN, p_id: r.id }); toast(`${r.name} removed.`); adminList(); }
+  try { await rpc('portal_delete_student', { p_pass: ADMIN, p_id: r.id }); toast(`${r.name} removed.`); adminList(); }
   catch (e) { toast(e.message); }
 }
 function adminDetail(row) {
