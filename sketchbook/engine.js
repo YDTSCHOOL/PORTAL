@@ -150,12 +150,14 @@ function vBox(l, w, h) {
 const nm = () => pick(NAMES), sup = () => pick(SUP);
 const G = {};
 
+function factQ(a, b, div) {
+  const p = a * b;
+  const q = div ? numQ(`${p} ${D} ${a} = ?`, b, [`Think of the fact family: ${a} ${X} ? = ${p}.`, `${a} ${X} ${b} = ${p}, so ${p} ${D} ${a} = ${b}.`]) : numQ(Math.random() < 0.5 ? `${a} ${X} ${b} = ?` : `${b} ${X} ${a} = ?`, p, [`Count by ${a}s, ${b} times: ${Array.from({ length: Math.min(b, 10) }, (_, i) => a * (i + 1)).join(', ')}.`, `${a} ${X} ${b} = ${p}.`]);
+  q.fact = Math.min(a, b) + 'x' + Math.max(a, b); q.key = 'facts'; return q;
+}
 G.facts = (d, o) => {
   const set = (o && o.set) || [2, 3, 4, 5, 6, 7, 8, 9, 10];
-  const a = pick(set), b = d === 1 ? R(1, 6) : R(1, 10), p = a * b;
-  const div = o && o.div;
-  const q = div ? numQ(`${p} ${D} ${a} = ?`, b, [`Think of the fact family: ${a} ${X} ? = ${p}.`, `${a} ${X} ${b} = ${p}, so ${p} ${D} ${a} = ${b}.`]) : numQ(Math.random() < 0.5 ? `${a} ${X} ${b} = ?` : `${b} ${X} ${a} = ?`, p, [`Count by ${a}s, ${b} times: ${Array.from({ length: Math.min(b, 10) }, (_, i) => a * (i + 1)).join(', ')}.`, `${a} ${X} ${b} = ${p}.`]);
-  q.fact = (Math.min(a, b)) + 'x' + Math.max(a, b); return q;
+  return factQ(pick(set), d === 1 ? R(1, 6) : R(1, 10), o && o.div);
 };
 
 /* Unit 1 */
@@ -697,5 +699,5 @@ Object.assign(TUT, {
 });
 ['life5b', 'life6b', 'life7b', 'life11b', 'life13', 'life14', 'life16', 'life18'].forEach(k => { TUT[k] = TUT.life1; });
 
-g.Engine = { UNITS, makeQ, G, TUT, fmt, money, R, pick, shuf };
+g.Engine = { UNITS, makeQ, factQ, G, TUT, fmt, money, R, pick, shuf };
 })(typeof window !== 'undefined' ? window : globalThis);

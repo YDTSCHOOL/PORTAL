@@ -240,8 +240,10 @@ function renderOverview() {
   });
   $('#ov').innerHTML = `<div class="ovTop"><span class="ovNum" style="background:${u.color}">${ui + 1}</span><div style="flex:1"><h2>${esc(u.t)}</h2><p>${esc(u.sub)}</p></div><span class="ucount">${u.assign.filter((_, ai) => isDone(ui, ai)).length} of 5 done</span></div>
     <div class="goals">${u.goals.map(g => `<span>${esc(g)}</span>`).join('')}${u.ixl ? `<span class="ixl">IXL: ${u.ixl}</span>` : ''}</div>
+    ${canTestOut(ui) ? `<div class="testout"><div><b>Already know this?</b><small>Get 5 of 5 on a quick test to skip this unit. One try per unit.</small></div><button class="go" id="tout">Test out</button></div>` : ''}
     <div class="alist">${rows}</div>`;
-  document.querySelectorAll('#ov .go').forEach(b => b.onclick = () => startAssign(ui, +b.dataset.a));
+  document.querySelectorAll('#ov .go[data-a]').forEach(b => b.onclick = () => startAssign(ui, +b.dataset.a));
+  if ($('#tout')) $('#tout').onclick = () => startTestOut(ui);
 }
 
 /* ---------- fact picture (mosaic) ---------- */
@@ -271,10 +273,38 @@ function startAssign(ui, ai) {
   if (a.kind === 'facts') renderLabShell(); else renderActShell();
   nextQ();
 }
+/* ----- adaptive picking ----- */
+function wpick(items, weight) { const w = items.map(weight), t = w.reduce((x, y) => x + y, 0); let r = Math.random() * t; for (let i = 0; i < items.length; i++) { r -= w[i]; if (r <= 0) return items[i]; } return items[items.length - 1]; }
+/* a fact she hasn't mastered yet, favoring ones she missed or answered slowly */
+function weakFact(fs) {
+  const set = fs.set, cand = [];
+  for (const x of set) for (let y = 1; y <= 10; y++) { const k = factKey(x, y); if (!fluent(k)) cand.push([x, y, k]); }
+  if (!cand.length) return null;
+  const c = wpick(cand, ([, , k]) => { const f = S.facts[k] || { s: 0, w: 0 }; return 1 + f.w * 6 + (2 - Math.min(2, f.s)) * 1.5; });
+  return E.factQ(c[0], c[1], fs.div);
+}
+function factFor(fs, d) { return (Math.random() < 0.67 && weakFact(fs)) || E.G.facts(d, fs); }
+/* how hard a skill has been for her: 0 (easy) to 1 (hard) */
+function skillWeak(key) { const st = (S.skills || {})[key] || { c: 0, w: 0 }; return (st.w + 1) / (st.c + st.w + 2); }
+function reviewQ(ui, d) {
+  const r = Math.random();
+  if (r < 0.25) { const fu = UNITS[E.R(0, ui)].facts; const q = factFor(fu, Math.max(2, d)); return q; }
+  const keys = []; for (let u = 0; u <= ui; u++) UNITS[u].a.forEach(x => keys.push([x[1], u]));
+  const here = keys.filter(k => k[1] === ui);
+  /* this unit's skills get a head start; skills she missed more get picked more */
+  const k = wpick(r < 0.55 ? here : keys, ([key, u]) => Math.pow(0.15 + skillWeak(key), 2) * (u === ui ? 2 : 1));
+  const q = E.G[k[0]](k[1] === ui ? d : Math.min(3, d + 1)); q.key = k[0]; return q;
+}
+function buildQ() {
+  if (A.plan) { const p = A.plan[A.i]; if (p.fact) return E.G.facts(p.d, p.fact); const q = E.G[p.key](p.d); q.key = p.key; return q; }
+  if (A.a.kind === 'facts') return factFor(UNITS[A.ui].facts, A.d);
+  if (A.a.kind === 'review') return reviewQ(A.ui, A.d);
+  return E.makeQ(A.ui, A.a, A.d);
+}
 function nextQ() {
   if (A.i >= A.a.n) return finish();
   let q, tries = 0;
-  do { q = E.makeQ(A.ui, A.a, A.d); } while ((q.prompt === A.prev) && ++tries < 8);
+  do { q = buildQ(); } while ((q.prompt === A.prev) && ++tries < 8);
   A.prev = q.prompt; A.q = q; A.answered = false; A.t0 = Date.now();
   if (A.a.kind === 'facts') renderFact(); else renderQ();
 }
@@ -282,10 +312,10 @@ function dotsHtml() { return Array.from({ length: A.a.n }, (_, i) => `<i class="
 function headHtml() {
   const u = UNITS[A.ui];
   return `<div class="actHead"><h2>${esc(A.a.name)}<small>Unit ${A.ui + 1} · ${esc(u.t)} · ${A.res.filter(Boolean).length} correct so far</small></h2>
-    <div class="dots" id="dots">${dotsHtml()}</div><button class="help" id="how">Show me how</button><button class="x" id="quit">Back to path</button></div>`;
+    <div class="dots" id="dots">${dotsHtml()}</div>${A.a.kind === 'testout' ? '' : '<button class="help" id="how">Show me how</button>'}<button class="x" id="quit">Back to path</button></div>`;
 }
 function updHead() { const s = document.querySelector('.actHead h2 small'); if (s) s.textContent = `Unit ${A.ui + 1} · ${UNITS[A.ui].t} · ${A.res.filter(Boolean).length} correct so far`; }
-function wireHead() { $('#how').onclick = showTutorial; $('#quit').onclick = () => { if (A.res.length && !confirm('Leave this assignment? Your answers so far won’t count toward mastering it.')) return; go('map'); }; }
+function wireHead() { if ($('#how')) $('#how').onclick = showTutorial; $('#quit').onclick = () => { if (A.res.length && !confirm('Leave this assignment? Your answers so far won’t count toward mastering it.')) return; go('map'); }; }
 function renderActShell() { $('#main').innerHTML = `<section class="panel act" id="act"></section>`; }
 function renderQ() {
   const q = A.q;
@@ -296,7 +326,7 @@ function renderQ() {
     <div class="qside"><p class="tip">Question ${A.i + 1} of ${A.a.n}</p><div class="prompt">${esc(q.prompt)}</div>${ans}<div class="fb" id="fb" aria-live="polite"></div></div></div>`;
   wireHead();
   if (q.type === 'mc') document.querySelectorAll('.opt').forEach(b => b.onclick = () => answerMC(+b.dataset.i));
-  else { const inp = $('#num'); inp.focus(); inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); answerNum(); } }; $('#chk').onclick = answerNum; }
+  else { const inp = $('#num'); inp.focus(); inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); answerNum(); } }; $('#chk').onclick = answerNum; }
 }
 document.addEventListener('keydown', e => {
   if (!A || A.a.kind === 'facts' || !A.q || $('#overlay:not(.hidden)')) return;
@@ -325,6 +355,7 @@ function recordFact(q, ok, ms) {
 }
 function tally(ok) {
   A.answered = true; A.res.push(ok); A.i++;
+  if (A.q && A.q.key && A.q.key !== 'facts') { S.skills = S.skills || {}; const st = S.skills[A.q.key] || (S.skills[A.q.key] = { c: 0, w: 0 }); if (ok) st.c++; else st.w++; }
   if (ok) { A.streak++; if (A.streak >= 2 && A.d < 3) { A.d++; A.streak = 0; } } else { A.streak = 0; if (A.d > 1) A.d--; }
   SES.q++; if (ok) SES.c++; SES.end = new Date().toISOString();
 }
@@ -392,8 +423,48 @@ function checkFact() {
   save();
 }
 
+/* ---------- test out ---------- */
+const canTestOut = ui => ui === S.unit && UNITS[ui].assign.every((_, ai) => !rec(ui, ai)) && !(S.testout || {})[ui];
+function startTestOut(ui) {
+  const u = UNITS[ui];
+  const plan = [{ fact: u.facts, d: 2 }, { key: u.a[0][1], d: 3 }, { key: u.a[1][1], d: 3 }, { key: u.a[2][1], d: 3 }, { key: E.pick([u.a[0][1], u.a[1][1]]), d: 3 }];
+  A = { ui, ai: -1, a: { kind: 'testout', name: `Test out: Unit ${ui + 1}`, n: 5, pass: 5 }, plan, i: 0, res: [], d: 3, streak: 0, q: null, prev: '' };
+  view = 'act'; topBar(); renderActShell(); nextQ();
+}
+function finishTestOut() {
+  const ui = A.ui, u = UNITS[ui], score = A.res.filter(Boolean).length, passed = score === 5;
+  S.testout = S.testout || {}; S.testout[ui] = { date: today(), score };
+  const got = [];
+  if (passed) {
+    u.assign.forEach((a, ai) => {
+      S.asg[a.id] = { best: a.pass, stars: 2, tries: 0, done: true, first: today(), last: today(), testedOut: true };
+      const rw = ST.rewardFor(ui * 5 + ai); if (rw && !S.unlocked.includes(rw)) { S.unlocked.push(rw); got.push(rw); }
+    });
+    S.drops += 100;
+    SES.done.push(`Tested out of Unit ${ui + 1} ${u.t}`);
+    if (S.unit < LAST) S.unit++;
+    mapSel = Math.min(ui + 1, LAST);
+  }
+  save(true);
+  const dr = document.querySelector('.drops'); if (dr) dr.innerHTML = ICON.drop + S.drops;
+  if ($('#tbar')) { $('#tbar').style.width = totalDone() / TOTAL * 100 + '%'; $('#tnum').textContent = totalDone() + ' / ' + TOTAL; }
+  if (passed) {
+    const next = ui < LAST ? UNITS[ui + 1] : null;
+    overlay(`<div class="sheet"><h2>You tested out!</h2><div class="stars">★★★</div><p>5 of 5 right. You already know <b>${esc(u.t)}</b>, so all 5 assignments are done. +100 paint drops.</p>
+      <div class="reward" style="flex-wrap:wrap">${got.map(r => `<div style="width:4.5em" title="${esc(ST.rewardLabel(r))}">${ST.rewardPreview(r)}</div>`).join('')}<span class="tip" style="width:100%">${got.length} new things in your studio</span></div>
+      <div class="btns"><button class="btn alt" id="toMap">Back to my path</button>${next ? `<button class="btn" id="nextTest">Test out of Unit ${ui + 2}</button>` : ''}</div></div>`);
+    confetti();
+    if ($('#nextTest')) $('#nextTest').onclick = () => { closeOverlay(); startTestOut(ui + 1); };
+  } else {
+    overlay(`<div class="sheet"><h2>Good try!</h2><p>You got <b>${score} of 5</b>. To test out you need all 5, so this unit has things to practice.</p><p>Start with the Fact Lab. The program will give you extra practice on what you missed.</p>
+      <div class="btns"><button class="btn" id="toMap">Start the unit</button></div></div>`);
+  }
+  $('#toMap').onclick = () => { closeOverlay(); go('map'); };
+}
+
 /* ---------- finishing ---------- */
 function finish() {
+  if (A.a.kind === 'testout') return finishTestOut();
   const { ui, ai, a } = A, score = A.res.filter(Boolean).length, stars = starsFor(a, score);
   const r = S.asg[a.id] || (S.asg[a.id] = { best: 0, stars: 0, tries: 0, done: false });
   r.tries++; r.last = today(); if (score > r.best) r.best = score;
@@ -616,7 +687,7 @@ async function adminList() {
 }
 function adminDetail(row) {
   const d = row.data;
-  const grid = UNITS.map((u, ui) => `<tr><td>${ui + 1}. ${esc(u.t)}</td>${u.assign.map(a => { const r = d.asg[a.id]; return `<td title="${esc(a.name)}">${r ? (r.done ? `<span class="stars">${'★'.repeat(r.stars)}</span>` : `${r.best}/${a.n} (${r.tries} tr${r.tries > 1 ? 'ies' : 'y'})`) : (ui <= d.unit ? '·' : '')}</td>`; }).join('')}</tr>`).join('');
+  const grid = UNITS.map((u, ui) => `<tr><td>${ui + 1}. ${esc(u.t)}</td>${u.assign.map(a => { const r = d.asg[a.id]; return `<td title="${esc(a.name)}">${r ? (r.done ? (r.testedOut ? 'tested out' : `<span class="stars">${'★'.repeat(r.stars)}</span>`) : `${r.best}/${a.n} (${r.tries} tr${r.tries > 1 ? 'ies' : 'y'})`) : (ui <= d.unit ? '·' : '')}</td>`; }).join('')}</tr>`).join('');
   const ses = (d.log || []).filter(x => x.q > 0).slice(-14).reverse();
   $('#main').innerHTML = `<section class="panel admin"><div class="adminTop"><h2>${esc(d.name)}</h2>
       <button class="btn alt" id="back">All students</button><button class="btn alt" id="unl">Open the next unit</button><button class="btn alt" id="pin">Set a new code</button><button class="btn" id="rep">Email today’s report</button></div>
