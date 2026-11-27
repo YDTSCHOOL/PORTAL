@@ -63,7 +63,9 @@ $$;
 
 create or replace function public._sketch_program_id() returns uuid
 language sql stable security definer set search_path = public, extensions as $$
-  select id from public.portal_programs where url ilike '%sketchbook%' order by sort nulls last limit 1
+  select id from public.portal_programs
+   where url ilike '%sketchbook%' or name ilike 'sketchbook%'
+   order by (url ilike '%sketchbook%') desc, sort nulls last limit 1
 $$;
 
 create or replace function public._sketch_admin(p_pass text) returns void
@@ -243,7 +245,23 @@ begin
   -- Every existing Sketchbook student becomes a NEW portal student. Nobody is linked by name.
   for r in select * from public.sketchbook_students where student_id is null loop
     nm := regexp_replace(trim(coalesce(nullif(r.data->>'name', ''), r.username)), '\s+', ' ', 'g');
-    if r.username = 'chavi' then nm := 'Chavi G.'; end if;   -- Chavi Greenes, not the portal's Chavi
+    sid := null;
+    if r.username = 'chavi' then
+      nm := 'Chavi G.';   -- Chavi Greenes, not the portal's Chavi
+      -- If the teacher already added "Chavi G." on the portal (and she has no Sketchbook progress yet), use that student.
+      select p.id into sid from public.portal_students p
+        where public._sketch_norm(p.name) = 'chavi g'
+          and not exists (select 1 from public.sketchbook_students k where k.student_id = p.id) limit 1;
+    end if;
+    if sid is not null then
+      update public.portal_students set programs = case when pid = any(coalesce(programs, '{}'::uuid[])) then programs
+             else array_append(coalesce(programs, '{}'::uuid[]), pid) end where id = sid;
+      update public.sketchbook_students set student_id = sid, pin = null,
+             data = jsonb_set(data, '{name}', to_jsonb((select name from public.portal_students where id = sid)))
+        where username = r.username;
+      insert into sketch_report values ('Chavi G.', 'Her Sketchbook progress is now on the "Chavi G." you added. She uses the code you gave her there.');
+      continue;
+    end if;
     if exists (select 1 from public.portal_students where public._sketch_norm(name) = public._sketch_norm(nm)) then
       nm := nm || ' (Sketchbook)';
     end if;

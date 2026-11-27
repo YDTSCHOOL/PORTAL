@@ -505,7 +505,7 @@ $("studentList").addEventListener("click", async function(e){
     var p = prompt("New 4-digit code for " + s3.name + ":");
     if (p == null) return;
     if (!/^\d{4}$/.test(p.trim())) { say("The code must be exactly 4 digits."); return; }
-    try { await rpc("portal_set_code", { p_pass: adminPass, p_id: s3.id, p_pin: p.trim() }); await loadAdmin(); say("New code saved for " + s3.name + ".", true); }
+    try { await rpc("portal_save_student", { p_pass: adminPass, p_id: s3.id, p_name: s3.name, p_pin: p.trim(), p_programs: s3.programs || [] }); await loadAdmin(); say("New code saved for " + s3.name + ".", true); }
     catch (err) { say(err.message); }
   }
   if (del) {
@@ -528,13 +528,8 @@ $("studentForm").addEventListener("submit", async function(e){
   var progs = Array.prototype.map.call($("fsChecks").querySelectorAll("input:checked"), function(c){ return c.value; });
   $("fsSave").disabled = true;
   try {
-    if (editingStudent) {
-      await rpc("portal_save_student", { p_pass: adminPass, p_id: editingStudent, p_name: nm,
-                                         p_pin: pin || null, p_programs: progs });
-    } else {
-      await rpc("portal_add_student", { p_pass: adminPass, p_first: first, p_last: last,
-                                        p_pin: pin, p_programs: progs });
-    }
+    await rpc("portal_save_student", { p_pass: adminPass, p_id: editingStudent, p_name: nm,
+                                       p_pin: pin || null, p_programs: progs });
     await loadAdmin(); clearStudentForm(); say(nm + " saved.", true); $("fsFirst").focus();
   } catch (err) { say(err.message); }
   finally { $("fsSave").disabled = false; }
