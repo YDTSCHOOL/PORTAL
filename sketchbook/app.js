@@ -2,7 +2,7 @@
 (function () {
 'use strict';
 const E = window.Engine, ST = window.Studio, UNITS = E.UNITS, TOTAL = UNITS.length * 5, LAST = UNITS.length - 1;
-const CFG = Object.assign({ SUPABASE_URL: '', SUPABASE_ANON_KEY: '', TABLE: 'sketchbook_students', REPORT_EMAIL: '', ADMIN_PASSWORD: 'teacher', PROGRAM_NAME: 'Sketchbook' }, window.SKETCHBOOK_CONFIG || {});
+const CFG = Object.assign({ SUPABASE_URL: '', SUPABASE_ANON_KEY: '', REPORT_EMAIL: '', PROGRAM_NAME: 'Sketchbook' }, window.SKETCHBOOK_CONFIG || {});
 const REMOTE = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
 /* Works with both the old "anon" key (starts eyJ...) and the new "publishable" key (starts sb_publishable_...) */
 const AUTH = () => Object.assign({ apikey: CFG.SUPABASE_ANON_KEY }, /^eyJ/.test(CFG.SUPABASE_ANON_KEY) ? { Authorization: 'Bearer ' + CFG.SUPABASE_ANON_KEY } : {});
@@ -12,34 +12,30 @@ const today = () => { const d = new Date(); return d.getFullYear() + '-' + Strin
 const nice = iso => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 const niceDate = ds => new Date(ds + 'T12:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 
-/* ---------- storage: Supabase when configured, this computer otherwise ---------- */
+/* ---------- storage: everything goes through Supabase functions (the tables themselves are locked) ---------- */
 const mem = {};
 const LS = {
   get: k => { try { return localStorage.getItem(k); } catch (e) { return mem[k] == null ? null : mem[k]; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } },
-  keys: () => { try { return Object.keys(localStorage); } catch (e) { return Object.keys(mem); } }
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
 };
-async function sb(path, opt) {
-  opt = opt || {};
-  const r = await fetch(CFG.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/' + path, Object.assign({}, opt, { headers: Object.assign(AUTH(), { 'Content-Type': 'application/json' }, opt.headers || {}) }));
-  if (!r.ok) throw new Error('Server said ' + r.status + ': ' + (await r.text()).slice(0, 160));
-  const t = await r.text(); return t ? JSON.parse(t) : null;
-}
-const Store = {
-  async get(u) {
-    if (REMOTE) { const rows = await sb(`${CFG.TABLE}?username=eq.${encodeURIComponent(u)}&select=*`); return rows[0] || null; }
-    const v = LS.get('sketchbook:' + u); return v ? JSON.parse(v) : null;
-  },
-  async put(u, pin, data) {
-    const row = { username: u, pin, data, updated_at: new Date().toISOString() };
-    LS.set('sketchbook:' + u, JSON.stringify(row));
-    if (REMOTE) await sb(CFG.TABLE + '?on_conflict=username', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) });
-  },
-  async list() {
-    if (REMOTE) return sb(`${CFG.TABLE}?select=*&order=updated_at.desc`);
-    return LS.keys().filter(k => k.startsWith('sketchbook:')).map(k => JSON.parse(LS.get(k))).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+const API = CFG.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/rpc/';
+async function rpc(fn, args) {
+  let r;
+  try { r = await fetch(API + fn, { method: 'POST', headers: Object.assign(AUTH(), { 'Content-Type': 'application/json' }), body: JSON.stringify(args || {}) }); }
+  catch (e) { throw new Error('Can’t reach the progress server. Check the internet connection and try again.'); }
+  const t = await r.text(); let d = null;
+  try { d = t ? JSON.parse(t) : null; } catch (e) { }
+  if (!r.ok) {
+    let m = (d && (d.message || d.hint)) || ('Server error ' + r.status);
+    if (/could not find the function|schema cache/i.test(m)) m = 'Sketchbook isn’t set up in Supabase yet. Run sketchbook/setup.sql in the SQL Editor.';
+    throw new Error(m);
   }
-};
+  return d;
+}
+/* A copy on this computer, in case the internet drops. The newer copy wins at the next sign-in. */
+const localKey = id => 'sketchbook2:' + id;
+function keepLocal() { if (S && SID) LS.set(localKey(SID), JSON.stringify({ data: S, updated_at: new Date().toISOString() })); }
+/* Only used to recognise copies saved on this computer by the old version of Sketchbook. */
 async function hashPin(u, p) {
   const s = 'sketchbook|' + u + '|' + p;
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
@@ -47,7 +43,7 @@ async function hashPin(u, p) {
 }
 
 /* ---------- state ---------- */
-let USER = null, PIN = null, S = null, SES = null, view = 'map', mapSel = 0, A = null, saveTimer = null;
+let TOKEN = null, SID = null, S = null, SES = null, view = 'map', mapSel = 0, A = null, saveTimer = null;
 function blank(name) {
   return { name, created: new Date().toISOString(), unit: 0, asg: {}, facts: {}, drops: 0, unlocked: [], log: [], studio: { paper: 'plain', items: [], drawing: '' } };
 }
@@ -58,7 +54,13 @@ function save(now) {
     saveTimer = null;
     if (!S) return;
     setSave('Saving…');
-    try { await Store.put(USER, PIN, S); setSave('Saved'); }
+    keepLocal();
+    try {
+      const r = await rpc('sketch_save', { p_token: TOKEN, p_data: S });
+      if (r && r.ok) setSave('Saved');
+      else if (r && r.error === 'session') sessionEnded();
+      else throw new Error('Not saved');
+    }
     catch (e) { setSave('Not saved yet'); console.warn(e); saveTimer = setTimeout(() => save(true), 10000); }
   }, now ? 0 : 800);
 }
@@ -99,7 +101,7 @@ const KIND = { facts: ['Fact mastery', '#F07A2E'], learn: ['Concept', '#3A5BD9']
 
 /* ---------- sign in ---------- */
 function showGate(msg) {
-  USER = PIN = S = SES = A = null;
+  TOKEN = SID = S = SES = A = null;
   $('#top').innerHTML = `<div class="brand">${ICON.brand}${esc(CFG.PROGRAM_NAME)}</div>`;
   $('#main').innerHTML = `<section class="panel gate" style="height:auto">
     <h1>${esc(CFG.PROGRAM_NAME)}</h1>
@@ -107,11 +109,11 @@ function showGate(msg) {
     <form id="gf" autocomplete="off">
       <label for="gn">Your first and last name</label><input id="gn" maxlength="40" required>
       <label for="gp">Your 4-digit code</label><input id="gp" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required>
-      <p class="tip" style="text-align:left;margin-top:.5vh">First time here? Make up a 4-digit code and remember it.</p>
+      <p class="tip" style="text-align:left;margin-top:.5vh">Use the name and code your teacher gave you.</p>
       <p class="err" id="gerr">${esc(msg || '')}</p>
       <button class="btn wide" id="gb">Open my sketchbook</button>
     </form>
-    <p class="dbstat ${REMOTE ? 'on' : ''}">${REMOTE ? 'Progress database connected' : 'Progress database not set up yet: saving on this computer only'}</p>
+    <p class="dbstat ${REMOTE ? 'on' : ''}">${REMOTE ? 'Progress database connected' : 'Progress database not set up yet (see config.js)'}</p>
     <button class="link" id="teacher">Teacher page</button>
   </section>`;
   $('#gn').focus();
@@ -122,20 +124,37 @@ function showGate(msg) {
     if (name.length < 2) return ($('#gerr').textContent = 'Type your name.');
     if (!/^\d{4}$/.test(pin)) return ($('#gerr').textContent = 'Your code is 4 numbers.');
     $('#gb').disabled = true; $('#gb').textContent = 'Loading your progress…'; $('#gerr').textContent = '';
-    const u = name.toLowerCase(), h = await hashPin(u, pin);
+    const fail = m => { $('#gb').disabled = false; $('#gb').textContent = 'Open my sketchbook'; $('#gerr').textContent = m; };
+    if (!REMOTE) return fail('Sketchbook isn’t connected to the progress database yet. Ask your teacher.');
     try {
-      let row = await Store.get(u);
-      if (REMOTE) { const loc = LS.get('sketchbook:' + u); if (loc) { const l = JSON.parse(loc); if ((!row || l.updated_at > row.updated_at) && l.pin === h) row = l; } }
-      if (row && row.pin !== h) { $('#gb').disabled = false; $('#gb').textContent = 'Open my sketchbook'; return ($('#gerr').textContent = 'That code does not match this name. Ask your teacher if you forgot it.'); }
-      USER = u; PIN = h; S = row ? row.data : blank(name);
+      const res = await rpc('sketch_login', { p_name: name, p_pin: pin });
+      if (!res || !res.ok) {
+        const er = res && res.error;
+        $('#gp').value = '';
+        return fail(er === 'locked' ? 'Too many wrong codes. Wait 5 minutes, or ask your teacher.' : 'Ask your teacher to sign you up.');
+      }
+      TOKEN = res.token; SID = res.id;
+      let data = res.data || null, at = res.updated_at || '';
+      const loc = LS.get(localKey(SID));
+      if (loc) { const l = JSON.parse(loc); if (l.data && (!data || l.updated_at > at)) { data = l.data; at = l.updated_at; } }
+      if (res.legacy) {
+        const old = LS.get('sketchbook:' + res.legacy);
+        if (old) { const l = JSON.parse(old); if (l.data && l.pin === await hashPin(res.legacy, pin) && (!data || l.updated_at > at)) data = l.data; }
+      }
+      const back = !!data;
+      S = data || blank(res.name);
       startSession();
-      toast(row ? `Welcome back, ${S.name.split(' ')[0]}! Your progress is loaded (${totalDone()} of ${TOTAL}).` : `Welcome, ${S.name.split(' ')[0]}! Your sketchbook is saved ${REMOTE ? 'online' : 'on this computer'}.`);
+      toast(back ? `Welcome back, ${S.name.split(' ')[0]}! Your progress is loaded (${totalDone()} of ${TOTAL}).` : `Welcome, ${S.name.split(' ')[0]}! Your sketchbook is saved online.`);
     } catch (err) {
       console.warn(err);
-      $('#gb').disabled = false; $('#gb').textContent = 'Open my sketchbook';
-      $('#gerr').textContent = 'Can’t reach the progress server. Check the internet connection and try again.';
+      fail(err.message);
     }
   };
+}
+function sessionEnded() {
+  keepLocal(); clearTimeout(saveTimer); saveTimer = null;
+  closeOverlay();
+  showGate('You were signed out. Sign in again to keep going. Your work is kept.');
 }
 function startSession() {
   S.log = (S.log || []).slice(-200);
@@ -151,22 +170,23 @@ async function signOut() {
   if (SES) SES.end = new Date().toISOString();
   clearTimeout(saveTimer); saveTimer = null;
   let ok = true;
-  try { await Store.put(USER, PIN, S); } catch (e) { ok = false; flushLocal(); console.warn(e); }
+  keepLocal();
+  try { const r = await rpc('sketch_save', { p_token: TOKEN, p_data: S }); ok = !!(r && r.ok); } catch (e) { ok = false; console.warn(e); }
+  if (ok) rpc('sketch_signout', { p_token: TOKEN }).catch(() => { });
   overlay(ok
-    ? `<div class="sheet" style="width:min(92vw,28em)"><h2>Saved!</h2><p>${REMOTE ? 'Your progress is saved online. Sign in on any computer to keep going.' : 'Your progress is saved on this computer.'}</p><p><b>${totalDone()} of ${TOTAL}</b> assignments mastered.</p><div class="btns"><button class="btn" id="bye">Done</button></div></div>`
+    ? `<div class="sheet" style="width:min(92vw,28em)"><h2>Saved!</h2><p>Your progress is saved online. Sign in on any computer to keep going.</p><p><b>${totalDone()} of ${TOTAL}</b> assignments mastered.</p><div class="btns"><button class="btn" id="bye">Done</button></div></div>`
     : `<div class="sheet" style="width:min(92vw,28em)"><h2>Not saved online</h2><p>The progress database didn’t answer. Your work is kept on this computer and will upload the next time you sign in here.</p><div class="btns"><button class="btn alt" id="retry">Try again</button><button class="btn" id="bye">Sign out anyway</button></div></div>`);
   const done = () => { closeOverlay(); showGate(); };
   $('#bye').onclick = done; if ($('#retry')) $('#retry').onclick = signOut;
   if (ok) setTimeout(() => { if ($('#bye')) done(); }, 2500);
 }
-function flushLocal() { if (S && USER) LS.set('sketchbook:' + USER, JSON.stringify({ username: USER, pin: PIN, data: S, updated_at: new Date().toISOString() })); }
 window.addEventListener('pagehide', () => {
   if (!S || !SES) return;
   if (SES.q > 0 && SES.reportedQ !== SES.q) { SES.reportedQ = SES.q; sendReport(S, SES.date); }
-  flushLocal();
-  if (REMOTE && saveTimer) { clearTimeout(saveTimer); const body = JSON.stringify({ username: USER, pin: PIN, data: S, updated_at: new Date().toISOString() }); if (body.length < 60000) fetch(CFG.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/' + CFG.TABLE + '?on_conflict=username', { method: 'POST', keepalive: true, body, headers: Object.assign(AUTH(), { 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }) }).catch(() => { }); }
+  keepLocal();
+  if (TOKEN && saveTimer) { clearTimeout(saveTimer); saveTimer = null; const body = JSON.stringify({ p_token: TOKEN, p_data: S }); if (body.length < 60000) fetch(API + 'sketch_save', { method: 'POST', keepalive: true, body, headers: Object.assign(AUTH(), { 'Content-Type': 'application/json' }) }).catch(() => { }); }
 });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushLocal(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') keepLocal(); });
 
 /* ---------- top bar & routing ---------- */
 function topBar() {
@@ -659,44 +679,110 @@ function sendReport(d, date) {
 }
 
 /* ---------- teacher page ---------- */
+/* The password is checked inside Supabase (it is the portal's teacher password). It is kept only while this page is open. */
+let ADMIN = null, AD = null;
+const sheetInput = 'width:100%;font-size:1.1em;padding:.6em;border:2px solid var(--line);border-radius:10px;margin:.4vh 0 1.2vh';
 function adminGate() {
-  overlay(`<div class="sheet" style="width:min(92vw,26em)"><h2>Teacher page</h2><p>Enter the teacher password from config.js.</p>
-    <form id="af"><input id="ap" type="password" style="width:100%;font-size:1.1em;padding:.6em;border:2px solid var(--line);border-radius:10px;margin:1.4vh 0" aria-label="Teacher password"><p class="err" id="aerr" style="color:var(--magenta);min-height:1.4em"></p>
-    <div class="btns"><button type="button" class="btn alt" id="ac">Cancel</button><button class="btn">Open</button></div></form></div>`);
+  overlay(`<div class="sheet" style="width:min(92vw,26em)"><h2>Teacher page</h2><p>Enter the teacher password. It is the same password as the portal’s Teacher page.</p>
+    <form id="af"><input id="ap" type="password" style="${sheetInput}" aria-label="Teacher password"><p class="err" id="aerr" style="color:var(--magenta);min-height:1.4em"></p>
+    <div class="btns"><button type="button" class="btn alt" id="ac">Cancel</button><button class="btn" id="ao">Open</button></div></form></div>`);
   $('#ap').focus(); $('#ac').onclick = closeOverlay;
-  $('#af').onsubmit = e => { e.preventDefault(); if ($('#ap').value !== CFG.ADMIN_PASSWORD) return ($('#aerr').textContent = 'That password is not right.'); closeOverlay(); adminList(); };
+  $('#af').onsubmit = async e => {
+    e.preventDefault();
+    const p = $('#ap').value; $('#aerr').textContent = ''; $('#ao').disabled = true;
+    try {
+      if (!(await rpc('sketch_admin_check', { p_pass: p }))) { $('#ao').disabled = false; return ($('#aerr').textContent = 'That password is not right.'); }
+      ADMIN = p; closeOverlay(); adminList();
+    } catch (err) { $('#ao').disabled = false; $('#aerr').textContent = err.message; }
+  };
 }
+const hasSketch = st => AD && AD.sketch_id && (st.programs || []).indexOf(AD.sketch_id) >= 0;
 async function adminList() {
   $('#top').innerHTML = `<div class="brand">${ICON.brand}${esc(CFG.PROGRAM_NAME)} · Teacher</div><button class="tab" id="aOut">Back to sign in</button>`;
-  $('#aOut').onclick = () => showGate();
-  $('#main').innerHTML = `<section class="panel admin"><div class="adminTop"><h2>Students</h2><button class="btn alt" id="plan">Print the unit plan</button></div><div id="alist" class="tbl"><p style="padding:1em">Loading…</p></div>
-    ${REMOTE ? '' : '<p class="warn">Progress is only saved on this computer right now. Add your Supabase address and key to config.js so it saves online and shows every student here.</p>'}
+  $('#aOut').onclick = () => { ADMIN = null; showGate(); };
+  $('#main').innerHTML = `<section class="panel admin"><div class="adminTop"><h2>Students</h2><button class="btn" id="addS">Add a student</button><button class="btn alt" id="plan">Print the unit plan</button></div><div id="alist" class="tbl"><p style="padding:1em">Loading…</p></div>
+    <p class="tip">Only students you add can sign in. This is the same list as the portal’s: a student uses one name and code for both.</p>
     ${CFG.REPORT_EMAIL ? `<p class="tip">Reports go to ${esc(CFG.REPORT_EMAIL)} each time a student signs out or closes the page.</p>` : '<p class="warn">No report email is set in config.js.</p>'}</section>`;
   $('#plan').onclick = printPlan;
-  let rows;
-  try { rows = await Store.list(); } catch (e) { $('#alist').innerHTML = `<p style="padding:1em">Couldn’t load students: ${esc(e.message)}</p>`; return; }
-  if (!rows.length) { $('#alist').innerHTML = '<p style="padding:1em">No students yet. When a student signs in for the first time, she shows up here.</p>'; return; }
+  $('#addS').onclick = addStudent;
+  try { AD = await rpc('sketch_admin_list', { p_pass: ADMIN }); } catch (e) { $('#alist').innerHTML = `<p style="padding:1em">Couldn’t load students: ${esc(e.message)}</p>`; return; }
+  const rows = AD.students.filter(hasSketch), others = AD.students.length - rows.length;
+  const note = others ? `<p style="padding:.6em 1em;margin:0">${others} other portal student${others > 1 ? 's' : ''} can’t open Sketchbook. To let them in, tick Sketchbook for them on the portal’s Teacher page.</p>` : '';
+  if (!rows.length) { $('#alist').innerHTML = '<p style="padding:1em">No students can open Sketchbook yet. Press “Add a student”.</p>' + note; return; }
   const wk = Date.now() - 7 * 864e5;
-  $('#alist').innerHTML = `<table><thead><tr><th>Student</th><th>Current unit</th><th>Mastered</th><th>Fluent facts</th><th>Last active</th><th>Minutes this week</th></tr></thead><tbody>${rows.map((r, i) => {
-    const d = r.data, m = Object.values(d.asg).filter(x => x.done).length;
-    let fl = 0; for (let a = 1; a <= 10; a++) for (let b = a; b <= 10; b++) { const f = d.facts[a + 'x' + b]; if (f && f.s >= 2) fl++; }
+  $('#alist').innerHTML = `<table><thead><tr><th>Student</th><th>Current unit</th><th>Mastered</th><th>Fluent facts</th><th>Last active</th><th>Minutes this week</th><th></th></tr></thead><tbody>${rows.map((r, i) => {
+    const lock = r.locked ? ' <small style="color:var(--magenta)">(locked)</small>' : '';
+    const acts = `<td style="white-space:nowrap"><button class="btn alt" style="font-size:.8em;padding:.4em .8em" data-code="${i}">Set a new code</button> <button class="btn alt" style="font-size:.8em;padding:.4em .8em" data-rm="${i}">Remove student</button></td>`;
+    if (!r.data) return `<tr class="click" data-i="${i}"><td><b>${esc(r.name)}</b>${lock}</td><td colspan="5" style="color:var(--muted,#777)">Not started yet</td>${acts}</tr>`;
+    const d = r.data, m = Object.values(d.asg || {}).filter(x => x.done).length;
+    let fl = 0; for (let a = 1; a <= 10; a++) for (let b = a; b <= 10; b++) { const f = (d.facts || {})[a + 'x' + b]; if (f && f.s >= 2) fl++; }
     const mins = (d.log || []).filter(x => new Date(x.start) > wk && x.q > 0).reduce((a, x) => a + Math.max(1, Math.round((new Date(x.end) - new Date(x.start)) / 60000)), 0);
-    return `<tr class="click" data-i="${i}"><td><b>${esc(d.name)}</b></td><td>${d.unit + 1}. ${esc(UNITS[d.unit].t)}</td><td>${m} / ${TOTAL}</td><td>${fl} / 55</td><td>${new Date(r.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td><td>${mins}</td></tr>`;
-  }).join('')}</tbody></table>`;
-  document.querySelectorAll('tr.click').forEach(tr => tr.onclick = () => adminDetail(rows[+tr.dataset.i]));
+    return `<tr class="click" data-i="${i}"><td><b>${esc(r.name)}</b>${lock}</td><td>${d.unit + 1}. ${esc(UNITS[d.unit].t)}</td><td>${m} / ${TOTAL}</td><td>${fl} / 55</td><td>${new Date(r.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td><td>${mins}</td>${acts}</tr>`;
+  }).join('')}</tbody></table>` + note;
+  document.querySelectorAll('tr.click').forEach(tr => tr.onclick = e => {
+    const r = rows[+tr.dataset.i], b = e.target.closest('button');
+    if (!b) return adminDetail(r);
+    if (b.dataset.code != null) return setCode(r);
+    if (b.dataset.rm != null) return removeStudent(r);
+  });
+}
+function addStudent() {
+  const progs = (AD && AD.programs) || [];
+  overlay(`<div class="sheet" style="width:min(92vw,30em)"><h2>Add a student</h2>
+    <form id="nf" autocomplete="off">
+      <label for="nfF">First name</label><input id="nfF" maxlength="30" style="${sheetInput}" required>
+      <label for="nfL">Last name</label><input id="nfL" maxlength="30" style="${sheetInput}" required>
+      <label for="nfP">4-digit code</label><input id="nfP" inputmode="numeric" maxlength="4" style="${sheetInput};letter-spacing:.4em" required>
+      <p style="margin:.6vh 0 .4vh"><b>Programs they can use</b></p>
+      <div style="display:flex;flex-wrap:wrap;gap:.5em 1.2em;margin-bottom:1vh">${progs.map(p => `<label style="display:flex;gap:.4em;align-items:center;font-weight:500"><input type="checkbox" value="${esc(p.id)}" ${p.id === AD.sketch_id ? 'checked' : ''} style="width:1.2em;height:1.2em"> ${esc((p.icon || '') + ' ' + p.name)}</label>`).join('')}</div>
+      <p class="err" id="nerr" style="color:var(--magenta);min-height:1.4em"></p>
+      <div class="btns"><button type="button" class="btn alt" id="nc">Cancel</button><button class="btn" id="ns">Add student</button></div>
+    </form></div>`);
+  $('#nfF').focus(); $('#nc').onclick = closeOverlay;
+  $('#nfP').oninput = function () { this.value = this.value.replace(/\D/g, '').slice(0, 4); };
+  $('#nf').onsubmit = async e => {
+    e.preventDefault();
+    const first = $('#nfF').value.trim(), last = $('#nfL').value.trim(), pin = $('#nfP').value.trim();
+    if (!/^\d{4}$/.test(pin)) return ($('#nerr').textContent = 'The code must be exactly 4 digits.');
+    const ids = Array.from(document.querySelectorAll('#nf input[type=checkbox]:checked')).map(c => c.value);
+    $('#ns').disabled = true;
+    try {
+      const r = await rpc('portal_add_student', { p_pass: ADMIN, p_first: first, p_last: last, p_pin: pin, p_programs: ids });
+      closeOverlay(); toast(`${r.name} added. Code: ${pin}`); adminList();
+    } catch (err) { $('#ns').disabled = false; $('#nerr').textContent = err.message; }
+  };
+}
+async function setCode(r) {
+  const p = prompt(`New 4-digit code for ${r.name}:`); if (p == null) return;
+  if (!/^\d{4}$/.test(p.trim())) return toast('The code must be 4 numbers.');
+  try { await rpc('portal_set_code', { p_pass: ADMIN, p_id: r.id, p_pin: p.trim() }); toast(`New code saved for ${r.name}.`); }
+  catch (e) { toast(e.message); }
+}
+async function removeStudent(r) {
+  if (!confirm(`Remove ${r.name}? They will not be able to sign in to Sketchbook or the portal. Their saved Sketchbook work stays in the database.`)) return;
+  try { await rpc('portal_remove_student', { p_pass: ADMIN, p_id: r.id }); toast(`${r.name} removed.`); adminList(); }
+  catch (e) { toast(e.message); }
 }
 function adminDetail(row) {
-  const d = row.data;
+  const d = row.data || blank(row.name);
+  d.asg = d.asg || {}; d.facts = d.facts || {}; d.log = d.log || [];
   const grid = UNITS.map((u, ui) => `<tr><td>${ui + 1}. ${esc(u.t)}</td>${u.assign.map(a => { const r = d.asg[a.id]; return `<td title="${esc(a.name)}">${r ? (r.done ? (r.testedOut ? 'tested out' : `<span class="stars">${'★'.repeat(r.stars)}</span>`) : `${r.best}/${a.n} (${r.tries} tr${r.tries > 1 ? 'ies' : 'y'})`) : (ui <= d.unit ? '·' : '')}</td>`; }).join('')}</tr>`).join('');
-  const ses = (d.log || []).filter(x => x.q > 0).slice(-14).reverse();
-  $('#main').innerHTML = `<section class="panel admin"><div class="adminTop"><h2>${esc(d.name)}</h2>
-      <button class="btn alt" id="back">All students</button><button class="btn alt" id="unl">Open the next unit</button><button class="btn alt" id="pin">Set a new code</button><button class="btn" id="rep">Email today’s report</button></div>
+  const ses = d.log.filter(x => x.q > 0).slice(-14).reverse();
+  $('#main').innerHTML = `<section class="panel admin"><div class="adminTop"><h2>${esc(row.name)}</h2>
+      <button class="btn alt" id="back">All students</button><button class="btn alt" id="unl">Open the next unit</button><button class="btn alt" id="pin">Set a new code</button><button class="btn alt" id="rm">Remove student</button><button class="btn" id="rep">Email today’s report</button></div>
     <div class="cols2"><div class="tbl"><table><thead><tr><th>Unit</th><th>Fact Lab</th><th>Learn 1</th><th>Learn 2</th><th>Real life</th><th>Review</th></tr></thead><tbody>${grid}</tbody></table></div>
     <div class="tbl"><table><thead><tr><th>Day</th><th>Time</th><th>Questions</th><th>Correct</th><th>Mastered</th></tr></thead><tbody>${ses.map(x => `<tr><td>${niceDate(x.date)}</td><td>${nice(x.start)}–${nice(x.end)}</td><td>${x.q}</td><td>${Math.round(x.c / x.q * 100)}%</td><td style="white-space:normal">${esc(x.done.join('; ') || '–')}</td></tr>`).join('') || '<tr><td colspan="5">No sessions yet.</td></tr>'}</tbody></table></div></div>
     <pre style="white-space:pre-wrap;font-family:var(--sans);font-size:.85em;background:var(--page);border-radius:10px;padding:1em">${esc(buildReport(d, today()))}</pre></section>`;
   $('#back').onclick = adminList;
-  $('#unl').onclick = async () => { if (d.unit >= LAST) return toast('All units are already open.'); if (!confirm(`Open Unit ${d.unit + 2} (${UNITS[d.unit + 1].t}) for ${d.name}? Use this to place her ahead.`)) return; d.unit++; await Store.put(row.username, row.pin, d); toast('Unit opened.'); adminDetail(row); };
-  $('#pin').onclick = async () => { const p = prompt(`New 4-digit code for ${d.name}:`); if (p == null) return; if (!/^\d{4}$/.test(p.trim())) return toast('The code must be 4 numbers.'); row.pin = await hashPin(row.username, p.trim()); await Store.put(row.username, row.pin, d); toast('New code saved.'); };
+  $('#unl').onclick = async () => {
+    if (d.unit >= LAST) return toast('All units are already open.');
+    if (!confirm(`Open Unit ${d.unit + 2} (${UNITS[d.unit + 1].t}) for ${row.name}? Use this to place them ahead.`)) return;
+    d.unit++;
+    try { await rpc('sketch_admin_save', { p_pass: ADMIN, p_id: row.id, p_data: d }); row.data = d; toast('Unit opened.'); adminDetail(row); }
+    catch (e) { d.unit--; toast(e.message); }
+  };
+  $('#pin').onclick = () => setCode(row);
+  $('#rm').onclick = () => removeStudent(row);
   $('#rep').onclick = async () => { if (!CFG.REPORT_EMAIL) return toast('Add REPORT_EMAIL in config.js first.'); const ok = await sendReport(d, today()); toast(ok ? 'Report sent to ' + CFG.REPORT_EMAIL : 'The report didn’t send. If this is the first one, check that inbox for the FormSubmit "Activate" email.'); };
 }
 function printPlan() {

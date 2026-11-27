@@ -1,20 +1,18 @@
 /* ====== SKETCHBOOK SETTINGS ======
-   This is the only file you ever need to change.
+   This file is public (anyone can read it on GitHub Pages), so it holds NO passwords.
    Keep the quote marks ' ' around each value. */
 window.SKETCHBOOK_CONFIG = {
-  /* 1. Your SCHOOL project in Supabase. The address is already filled in.
-        For SUPABASE_ANON_KEY paste the Publishable key (starts with sb_publishable_)
-        from Project Settings > API Keys. */
+  /* 1. Your SCHOOL project in Supabase. The publishable key is meant to be public:
+        the database only lets it call the Sketchbook sign-in and save functions. */
   SUPABASE_URL: 'https://belathxxgwayxdmiqvpd.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_Kxuxi919RbsmEk-p8iNt-w_zm6BsRI9',
 
   /* 2. Where progress reports are emailed (one email each time the student signs out or closes the page). */
   REPORT_EMAIL: 'sfsendlerydt@gmail.com',
 
-  /* 3. Password for the Teacher page (link at the bottom of the sign-in screen). Change it. */
-  ADMIN_PASSWORD: 'Sketch2026',
+  /* The Teacher page uses the PORTAL's teacher password, checked inside Supabase.
+     Students are added on the portal's Teacher page or on Sketchbook's Teacher page. */
 
-  /* Leave these as they are. */
-  TABLE: 'sketchbook_students',
+  /* Leave this as it is. */
   PROGRAM_NAME: 'Sketchbook'
 };

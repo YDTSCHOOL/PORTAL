@@ -91,7 +91,7 @@ input:focus{border-color:var(--blue);outline:none}
 .form{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--signal);padding:18px;margin-top:18px;border-radius:4px}
 .form h3{font:700 24px/1 var(--cond);margin:0 0 14px}
 .grid2{display:grid;grid-template-columns:90px 1fr 1.5fr 90px;gap:12px}
-.grid3{display:grid;grid-template-columns:1fr 160px;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 160px;gap:12px}
 .checks{display:flex;flex-wrap:wrap;gap:8px 18px;margin:4px 0 14px}
 .checks label{display:flex;gap:8px;align-items:center;font-weight:500;margin:0;cursor:pointer}
 .checks input{width:20px;height:20px}
@@ -124,15 +124,15 @@ input:focus{border-color:var(--blue);outline:none}
     <section id="sSignin" class="signin">
       <div class="hello">
         <h1 id="greet">Good morning.</h1>
-        <p>Sign in with your first name and your 4-digit PIN to open your programs.</p>
+        <p>Sign in with your name and your 4-digit code to open your programs.</p>
       </div>
       <form class="card" id="signinForm" autocomplete="off">
         <div class="field">
-          <label for="sName">First name</label>
+          <label for="sName">Your name</label>
           <input type="text" id="sName" autocomplete="off" autocapitalize="words" spellcheck="false" required>
         </div>
         <div class="field">
-          <label for="sPin">PIN</label>
+          <label for="sPin">4-digit code</label>
           <input type="password" id="sPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off" required>
         </div>
         <button class="btn wide" id="signinBtn" type="submit">Sign in</button>
@@ -200,17 +200,19 @@ input:focus{border-color:var(--blue);outline:none}
         <form class="form" id="studentForm" autocomplete="off">
           <h3 id="studentFormTitle">Add a student</h3>
           <div class="grid3">
-            <div class="field"><label for="fsName">First name</label>
-              <input type="text" id="fsName" autocomplete="off" required>
-              <p class="hint">Two boys with the same name? Add a last initial, like Moshe K.</p></div>
-            <div class="field"><label for="fsPin">4-digit PIN</label>
+            <div class="field"><label for="fsFirst">First name</label>
+              <input type="text" id="fsFirst" autocomplete="off" required></div>
+            <div class="field"><label for="fsLast">Last name</label>
+              <input type="text" id="fsLast" autocomplete="off">
+              <p class="hint">The student signs in with first and last name.</p></div>
+            <div class="field"><label for="fsPin">4-digit code</label>
               <input type="text" id="fsPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off">
               <p class="hint" id="fsPinHint">Required.</p></div>
           </div>
-          <label>Programs he can open</label>
+          <label>Programs they can use</label>
           <div class="checks" id="fsChecks"></div>
           <div class="row">
-            <button class="btn" type="submit" id="fsSave">Save student</button>
+            <button class="btn" type="submit" id="fsSave">Add student</button>
             <button class="btn plain" type="button" id="fsCancel">Clear</button>
           </div>
         </form>
@@ -276,7 +278,7 @@ async function rpc(fn, args){
   if (!r.ok) {
     var m = (data && (data.message || data.hint)) || ("Server error " + r.status);
     if (/could not find the function|schema cache/i.test(m))
-      m = "The portal isn't set up in Supabase yet. Run portal_setup.sql first.";
+      m = "This part isn't set up in Supabase yet. Run sketchbook/setup.sql in the SQL Editor.";
     throw new Error(m);
   }
   return data;
@@ -317,18 +319,17 @@ $("sPin").addEventListener("input", function(){ this.value = this.value.replace(
 
 $("signinForm").addEventListener("submit", async function(e){
   e.preventDefault();
-  var name = $("sName").value.trim(), pin = $("sPin").value.trim(), msg = $("signinMsg");
+  var name = $("sName").value.trim().replace(/\s+/g, " "), pin = $("sPin").value.trim(), msg = $("signinMsg");
   msg.textContent = "";
-  if (!name) { msg.textContent = "Type your first name."; return; }
-  if (!/^\d{4}$/.test(pin)) { msg.textContent = "Your PIN is 4 numbers."; return; }
+  if (!name) { msg.textContent = "Type your name."; return; }
+  if (!/^\d{4}$/.test(pin)) { msg.textContent = "Your code is 4 numbers."; return; }
   $("signinBtn").disabled = true;
   try {
     var res = await rpc("portal_login", { p_name: name, p_pin: pin });
     if (!res || !res.ok) {
       var err = res && res.error;
-      msg.textContent = err === "name" ? "That name isn't on the list. Check the spelling or ask your teacher."
-                      : err === "locked" ? "Too many wrong PINs. Wait 5 minutes, or ask your teacher to reset it."
-                      : "That PIN doesn't match. Try again.";
+      msg.textContent = err === "locked" ? "Too many wrong codes. Wait 5 minutes, or ask your teacher to reset it."
+                      : "Ask your teacher to sign you up.";
       $("sPin").value = ""; $("sPin").focus();
       return;
     }
@@ -450,7 +451,7 @@ function progName(id){ var p = data.programs.find(function(x){ return x.id === i
 function renderStudents(){
   var el = $("studentList");
   if (!data.students.length) {
-    el.innerHTML = '<div class="empty">No students yet. Add programs first, then add each boy below with a PIN.</div>';
+    el.innerHTML = '<div class="empty">No students yet. Add programs first, then add each student below with a 4-digit code.</div>';
   } else {
     el.innerHTML = '<div class="scroll"><table class="tbl"><thead><tr><th>Name</th><th>Programs</th><th></th></tr></thead><tbody>' +
       data.students.map(function(s){
@@ -458,7 +459,8 @@ function renderStudents(){
         return '<tr><td><strong>' + esc(s.name) + '</strong> ' + (s.locked ? '<span class="tag">Locked</span>' : '') + '</td>' +
           '<td>' + (names.length ? esc(names.join(", ")) : '<span style="color:var(--muted)">None</span>') + '</td>' +
           '<td class="act"><button class="btn plain small" data-edit-s="' + s.id + '">Edit</button> ' +
-          '<button class="btn danger small" data-del-s="' + s.id + '">Remove</button></td></tr>';
+          '<button class="btn plain small" data-code-s="' + s.id + '">Set a new code</button> ' +
+          '<button class="btn danger small" data-del-s="' + s.id + '">Remove student</button></td></tr>';
       }).join("") + '</tbody></table></div>';
   }
   renderChecks([]);
@@ -477,28 +479,39 @@ var editingStudent = null;
 function clearStudentForm(){
   editingStudent = null;
   $("studentFormTitle").textContent = "Add a student";
-  $("fsName").value = ""; $("fsPin").value = "";
+  $("fsFirst").value = ""; $("fsLast").value = ""; $("fsPin").value = "";
   $("fsPinHint").textContent = "Required.";
+  $("fsSave").textContent = "Add student";
   renderChecks([]);
 }
 $("fsCancel").onclick = clearStudentForm;
 $("fsPin").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); });
 
 $("studentList").addEventListener("click", async function(e){
-  var ed = e.target.closest("[data-edit-s]"), del = e.target.closest("[data-del-s]");
+  var ed = e.target.closest("[data-edit-s]"), del = e.target.closest("[data-del-s]"), code = e.target.closest("[data-code-s]");
   if (ed) {
     var s = data.students.find(function(x){ return x.id === ed.dataset.editS; });
+    var parts = String(s.name).trim().split(/\s+/);
     editingStudent = s.id;
     $("studentFormTitle").textContent = "Edit " + s.name;
-    $("fsName").value = s.name; $("fsPin").value = "";
-    $("fsPinHint").textContent = "Leave blank to keep his PIN. Saving also unlocks him.";
+    $("fsFirst").value = parts.shift() || ""; $("fsLast").value = parts.join(" "); $("fsPin").value = "";
+    $("fsPinHint").textContent = "Leave blank to keep the same code. Saving also unlocks the student.";
+    $("fsSave").textContent = "Save changes";
     renderChecks(s.programs || []);
-    $("fsName").focus();
+    $("fsFirst").focus();
+  }
+  if (code) {
+    var s3 = data.students.find(function(x){ return x.id === code.dataset.codeS; });
+    var p = prompt("New 4-digit code for " + s3.name + ":");
+    if (p == null) return;
+    if (!/^\d{4}$/.test(p.trim())) { say("The code must be exactly 4 digits."); return; }
+    try { await rpc("portal_set_code", { p_pass: adminPass, p_id: s3.id, p_pin: p.trim() }); await loadAdmin(); say("New code saved for " + s3.name + ".", true); }
+    catch (err) { say(err.message); }
   }
   if (del) {
     var s2 = data.students.find(function(x){ return x.id === del.dataset.delS; });
-    if (!confirm("Remove " + s2.name + " from the portal? His progress inside each program is not affected.")) return;
-    try { await rpc("portal_delete_student", { p_pass: adminPass, p_id: s2.id }); await loadAdmin(); clearStudentForm(); say(s2.name + " removed.", true); }
+    if (!confirm("Remove " + s2.name + "? They will not be able to sign in to the portal or Sketchbook. Their saved work inside each program stays.")) return;
+    try { await rpc("portal_remove_student", { p_pass: adminPass, p_id: s2.id }); await loadAdmin(); clearStudentForm(); say(s2.name + " removed.", true); }
     catch (err) { say(err.message); }
   }
 });
@@ -506,14 +519,23 @@ $("studentList").addEventListener("click", async function(e){
 $("studentForm").addEventListener("submit", async function(e){
   e.preventDefault();
   var pin = $("fsPin").value.trim();
-  if (pin && !/^\d{4}$/.test(pin)) { say("The PIN must be exactly 4 digits."); return; }
+  var first = $("fsFirst").value.trim(), last = $("fsLast").value.trim();
+  var nm = (first + " " + last).trim().replace(/\s+/g, " ");
+  if (!first) { say("Type the first name."); return; }
+  if (!editingStudent && !last) { say("Type the last name."); return; }
+  if (!editingStudent && !pin) { say("Type a 4-digit code."); return; }
+  if (pin && !/^\d{4}$/.test(pin)) { say("The code must be exactly 4 digits."); return; }
   var progs = Array.prototype.map.call($("fsChecks").querySelectorAll("input:checked"), function(c){ return c.value; });
   $("fsSave").disabled = true;
   try {
-    await rpc("portal_save_student", { p_pass: adminPass, p_id: editingStudent, p_name: $("fsName").value,
-                                       p_pin: pin || null, p_programs: progs });
-    var nm = $("fsName").value.trim();
-    await loadAdmin(); clearStudentForm(); say(nm + " saved.", true); $("fsName").focus();
+    if (editingStudent) {
+      await rpc("portal_save_student", { p_pass: adminPass, p_id: editingStudent, p_name: nm,
+                                         p_pin: pin || null, p_programs: progs });
+    } else {
+      await rpc("portal_add_student", { p_pass: adminPass, p_first: first, p_last: last,
+                                        p_pin: pin, p_programs: progs });
+    }
+    await loadAdmin(); clearStudentForm(); say(nm + " saved.", true); $("fsFirst").focus();
   } catch (err) { say(err.message); }
   finally { $("fsSave").disabled = false; }
 });
