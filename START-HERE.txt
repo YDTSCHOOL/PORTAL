@@ -1,0 +1,48 @@
+SKETCHBOOK: 20 UNITS, 100 ASSIGNMENTS
+SETUP IN 4 STEPS  (about 10 minutes, one time only)
+
+IMPORTANT: Steps 1 and 2 connect the progress database. Until you do them, the sign-in
+screen says "saving on this computer only" and her work will NOT follow her to another
+computer. After them it says "Progress database connected" (green dot).
+
+STEP 1. Add the table to Supabase
+  - Go to supabase.com and open your SCHOOL project.
+  - Click "SQL Editor" on the left, then "New query".
+  - Open the file setup.sql (in this folder) with Notepad, copy everything, paste it in, and press "Run".
+  - You should see "Success. No rows returned."
+
+STEP 2. Fill in config.js
+  - Open config.js with Notepad.
+  - Paste the same Supabase URL and anon key you used in the portal's config.js
+    between the quote marks on the SUPABASE_URL and SUPABASE_ANON_KEY lines.
+  - Change ADMIN_PASSWORD from teacher to a password you choose.
+  - Save the file.
+
+STEP 3. Put the folder on GitHub (same place as the portal)
+  - Go to github.com, sign in as YDTSCHOOL and open the PORTAL repository.
+  - Click "Add file" > "Upload files".
+  - Drag the whole "sketchbook" folder into the box, then press "Commit changes".
+  - Wait about 2 minutes. The program is now at:
+        https://ydtschool.github.io/PORTAL/sketchbook/
+    (If your portal's address looks different, use that address and add /sketchbook/ at the end.)
+  - Add that address to the portal as a new program button, or bookmark it on her Chromebook.
+
+STEP 4. Turn on the email reports (once)
+  - Open the program, click "Teacher page" at the bottom, type your password.
+  - Have the student sign in and answer a few questions, then sign out (or use the
+    "Email today's report" button on her page).
+  - The first email goes to sfsendlerydt@gmail.com from FormSubmit with an "Activate" button.
+    Click it (check Spam). After that, a report arrives every time she finishes.
+
+HOW CHAVI SIGNS IN AND OUT
+  She types her first and last name and makes up a 4-digit code the first time.
+  Signing in loads her saved progress from the database. Her work also saves after every
+  question. When she presses "Sign out" the program saves everything and shows "Saved!".
+  The same name and code work on any computer. If she forgets her code,
+  open the Teacher page, click her name, and press "Set a new code".
+
+TO PLACE HER AHEAD
+  Teacher page > her name > "Open the next unit". Each press opens one more unit.
+
+TO UPDATE LATER
+  Upload the new files into the same sketchbook folder on GitHub. Her progress is kept.

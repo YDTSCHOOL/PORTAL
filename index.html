@@ -1,591 +1,275 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Learning Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketchbook</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232B2D5B'/%3E%3Ccircle cx='11' cy='12' r='4' fill='%23F2B533'/%3E%3Ccircle cx='21' cy='12' r='4' fill='%23D23C77'/%3E%3Ccircle cx='16' cy='21' r='4' fill='%233A5BD9'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ===== SETTINGS: the only lines you might ever change ===== */
-/* (Your Supabase address and key are in the script near the bottom.) */
-
 :root{
-  --steel:#E6EBF0; --panel:#FFFFFF; --ink:#16202A; --muted:#5B6976;
-  --line:#C9D2DB; --signal:#F4B400; --signal-dark:#C98F00; --blue:#1F4FD8;
-  --bad:#B42318; --good:#0F7B4A;
-  --cond:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
-  --body:"Barlow",Arial,Helvetica,sans-serif;
+  --ink:#2B2D5B; --soft:#5A5F80; --faint:#9AA0B8; --line:#DCDFEE; --page:#F1F2F9; --paper:#FFFFFF;
+  --cobalt:#3A5BD9; --magenta:#D23C77; --marigold:#F2B533; --leaf:#2FA572; --violet:#7A4FD1; --orange:#F07A2E;
+  --goodbg:#E2F5EA; --badbg:#FCE6EE;
+  --hand:"Patrick Hand","Comic Sans MS",cursive; --sans:"Nunito","Segoe UI",system-ui,sans-serif;
 }
-*{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{background:var(--steel);color:var(--ink);font:500 17px/1.45 var(--body);}
-button,input{font:inherit;color:inherit}
-:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
-.hidden{display:none !important}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:var(--page);font-size:clamp(13px,2.1vh,17px);line-height:1.4;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--marigold);outline-offset:2px}
+h1,h2,h3{font-family:var(--hand);font-weight:400;line-height:1.05}
+#app{height:100dvh;display:grid;grid-template-rows:auto 1fr}
+.hidden{display:none!important}
 
-/* ---- layout ---- */
-.screen{min-height:100%;display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;justify-content:space-between;
-  padding:14px 28px;background:var(--ink);color:#fff;border-bottom:6px solid var(--signal)}
-.brand{font:700 26px/1 var(--cond);letter-spacing:.02em}
-.clock{font:600 22px/1 var(--cond);color:#DCE3EA;font-variant-numeric:tabular-nums}
-main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+/* top bar: a strip of pencil colors along the bottom edge */
+#top{display:flex;align-items:center;gap:clamp(8px,1.5vw,22px);padding:.7vh clamp(10px,1.8vw,26px);background:var(--paper);position:relative}
+#top::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:4px;background:linear-gradient(90deg,var(--cobalt) 0 16.6%,var(--magenta) 0 33.3%,var(--marigold) 0 50%,var(--leaf) 0 66.6%,var(--violet) 0 83.3%,var(--orange) 0)}
+.brand{font-family:var(--hand);font-size:1.9em;line-height:1;margin-right:auto;display:flex;align-items:center;gap:.35em}
+.brand svg{width:1.1em;height:1.1em}
+.who{color:var(--soft);font-size:.92em}
+.drops{display:flex;align-items:center;gap:.3em;font-weight:800}
+.drops svg{width:1.1em;height:1.1em}
+.tab{padding:.35em .9em;border-radius:999px;font-weight:700;color:var(--soft)}
+.tab:hover{background:var(--page)}
+.tab.on{background:var(--ink);color:#fff}
+.save{font-size:.78em;color:var(--faint);min-width:5.5em;text-align:right}
+#main{min-height:0;padding:clamp(10px,2vh,20px) clamp(10px,1.8vw,26px);display:grid}
+.panel{background:var(--paper);border-radius:14px;box-shadow:0 1px 0 var(--line),0 8px 24px rgba(43,45,91,.07);min-height:0;overflow:hidden}
 
-/* ---- sign in ---- */
-.signin{display:grid;grid-template-columns:1fr 380px;gap:48px;align-items:center;
-  width:100%;max-width:920px}
-.hello h1{font:700 clamp(46px,7vw,86px)/.92 var(--cond);margin:0 0 14px;letter-spacing:-.01em}
-.hello p{margin:0;color:var(--muted);font-size:19px;max-width:30ch}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:26px 26px 22px;
-  box-shadow:0 2px 0 var(--line)}
-label{display:block;font:600 15px/1.2 var(--body);margin:0 0 6px}
-.field{margin-bottom:16px}
-input[type=text],input[type=password],input[type=url],input[type=number]{
-  width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:4px;background:#fff;font-size:20px}
-input:focus{border-color:var(--blue);outline:none}
-.pin{letter-spacing:.5em;font-variant-numeric:tabular-nums}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:4px;
-  padding:13px 22px;font:700 21px/1 var(--cond);letter-spacing:.03em;cursor:pointer;
-  background:var(--signal);color:var(--ink);box-shadow:0 3px 0 var(--signal-dark)}
-.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--signal-dark)}
-.btn[disabled]{opacity:.55;cursor:wait}
-.btn.wide{width:100%}
-.btn.plain{background:#fff;border:2px solid var(--line);box-shadow:none;font-size:18px;padding:10px 16px}
-.btn.small{font-size:16px;padding:8px 12px}
-.btn.danger{background:#fff;border:2px solid #E7B4AE;color:var(--bad);box-shadow:none}
-.msg{min-height:24px;margin:12px 0 0;font-weight:600}
-.msg.bad{color:var(--bad)} .msg.good{color:var(--good)}
-.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:4px}
-.foot{padding:10px 28px;display:flex;justify-content:flex-end}
+/* sign in */
+.gate{margin:auto;width:min(92vw,28em);text-align:center;padding:4vh 2em}
+.gate h1{font-size:3.4em}
+.gate .lead{color:var(--soft);margin:.4em 0 2.4vh}
+.gate label{display:block;text-align:left;font-weight:700;font-size:.9em;margin:1.4vh 0 .4vh}
+.gate input{width:100%;padding:.6em .8em;border:2px solid var(--line);border-radius:10px;font-size:1.1em;background:#fff}
+.gate input:focus{border-color:var(--cobalt);outline:none}
+.gate .err{color:var(--magenta);min-height:1.5em;margin-top:1vh;font-weight:600}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4em;background:var(--ink);color:#fff;border-radius:10px;padding:.65em 1.4em;font-weight:800}
+.btn:hover{background:#3B3E78}
+.btn.alt{background:var(--page);color:var(--ink)}
+.btn.alt:hover{background:#E4E6F3}
+.btn.wide{width:100%;margin-top:1vh}
+.btn:disabled{opacity:.45;cursor:default}
+.link{color:var(--soft);text-decoration:underline;font-size:.85em;margin-top:2vh}
 
-/* ---- program choice ---- */
-.choose{width:100%;max-width:980px}
-.choose h1{font:700 clamp(40px,6vw,68px)/.95 var(--cond);margin:0 0 6px}
-.choose .sub{color:var(--muted);margin:0 0 26px;font-size:19px}
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
-.tile{display:flex;flex-direction:column;align-items:flex-start;gap:14px;text-align:left;
-  background:var(--panel);border:2px solid var(--line);border-left:10px solid var(--signal);border-radius:4px;
-  padding:20px;cursor:pointer;min-height:132px;text-decoration:none;color:var(--ink)}
-.tile:hover{border-color:var(--ink);border-left-color:var(--signal)}
-.tile .ic{font-size:36px;line-height:1}
-.tile .nm{font:700 27px/1.05 var(--cond)}
-.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.going{text-align:center}
-.going h1{font:700 clamp(40px,6vw,72px)/1 var(--cond);margin:0 0 10px}
-.going .ic{font-size:64px}
+/* map: path on the left, unit overview on the right */
+.map{display:grid;grid-template-columns:minmax(0,11fr) minmax(0,10fr);gap:clamp(10px,1.6vw,22px);min-height:0}
+.pathPanel{display:grid;grid-template-rows:auto 1fr auto;padding:1.6vh 1.4vw}
+.pathHead{display:flex;align-items:center;justify-content:space-between;gap:1em}
+.pathHead h2{font-size:1.9em}
+.pathHead span{color:var(--soft);font-size:.9em}
+.pathSvg{min-height:0;display:flex;align-items:center;justify-content:center}
+.pathSvg svg{width:100%;height:100%;max-height:100%}
+.node{cursor:pointer}
+.node:focus-visible circle.ring2{stroke:var(--marigold);stroke-width:5}
+.node.locked{cursor:not-allowed}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.12);opacity:.35}}
+.pathFoot{display:flex;align-items:center;gap:1.2vw}
+.bigbar{flex:1;height:10px;border-radius:5px;background:var(--page);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.bigbar.tall{height:16px;border-radius:8px}
+.pnum{font-size:.9em;color:var(--soft);white-space:nowrap}
+.tprog{display:flex;align-items:center;gap:.5em;width:clamp(120px,16vw,230px);font-size:.85em;font-weight:800}
+.tprog span{white-space:nowrap}
+.ucount{background:var(--page);border-radius:999px;padding:.2em .8em;font-weight:800;font-size:.85em;white-space:nowrap}
+.dbstat{font-size:.8em;color:var(--soft);margin-top:1.6vh}
+.dbstat::before{content:"";display:inline-block;width:.6em;height:.6em;border-radius:50%;background:var(--marigold);margin-right:.4em}
+.dbstat.on::before{background:var(--leaf)}
+.bigbar i{display:block;height:100%;background:linear-gradient(90deg,var(--cobalt),var(--violet),var(--magenta),var(--orange),var(--marigold));transition:width .6s}
+.mini{display:flex;align-items:center;gap:.5em;font-size:.85em;color:var(--soft);cursor:pointer;border-radius:8px;padding:2px 6px}
+.mini:hover{background:var(--page)}
+.mini svg{width:2.8em;height:2.8em}
 
-/* ---- teacher ---- */
-.teacher{width:100%;max-width:1000px;align-self:flex-start}
-.tabs{display:flex;gap:4px;border-bottom:3px solid var(--ink);margin:0 0 20px}
-.tab{background:none;border:0;padding:10px 18px;font:700 21px/1 var(--cond);cursor:pointer;color:var(--muted);
-  border-radius:4px 4px 0 0}
-.tab[aria-selected=true]{background:var(--ink);color:#fff}
-.tbl{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line)}
-.tbl th,.tbl td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
-.tbl th{font:600 15px/1.2 var(--body);color:var(--muted);background:#F4F6F8}
-.tbl td.act{white-space:nowrap;text-align:right}
-.url{color:var(--muted);font-size:15px;word-break:break-all}
-.tag{display:inline-block;background:#FDECEA;color:var(--bad);font-size:13px;font-weight:600;padding:2px 8px;border-radius:10px}
-.form{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--signal);padding:18px;margin-top:18px;border-radius:4px}
-.form h3{font:700 24px/1 var(--cond);margin:0 0 14px}
-.grid2{display:grid;grid-template-columns:90px 1fr 1.5fr 90px;gap:12px}
-.grid3{display:grid;grid-template-columns:1fr 160px;gap:12px}
-.checks{display:flex;flex-wrap:wrap;gap:8px 18px;margin:4px 0 14px}
-.checks label{display:flex;gap:8px;align-items:center;font-weight:500;margin:0;cursor:pointer}
-.checks input{width:20px;height:20px}
-.empty{padding:18px;background:var(--panel);border:1px dashed var(--line);color:var(--muted)}
-.hint{color:var(--muted);font-size:15px;margin:4px 0 0}
-.scroll{overflow-x:auto}
+.overview{display:flex;flex-direction:column;padding:1.8vh 1.5vw;gap:1vh}
+.ovTop{display:flex;gap:1em;align-items:flex-start}
+.ovNum{flex:none;width:2.6em;height:2.6em;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--hand);font-size:1.5em}
+.ovTop h2{font-size:2em}
+.ovTop p{color:var(--soft)}
+.goals{display:flex;flex-wrap:wrap;gap:.4em}
+.goals span{background:var(--page);border-radius:999px;padding:.15em .7em;font-size:.82em}
+.goals .ixl{background:#E9EEFF;color:var(--cobalt);font-weight:700}
+.alist{display:flex;flex-direction:column;gap:.75vh;min-height:0;overflow:auto;padding:2px}
+.arow{display:grid;grid-template-columns:2.4em 1fr auto;gap:.8em;align-items:center;padding:.85vh .8em;border-radius:10px;border:2px solid var(--line)}
+.arow.now{border-color:var(--ink)}
+.arow.lock{opacity:.5}
+.arow .ic{width:2.4em;height:2.4em;border-radius:8px;display:grid;place-items:center}
+.arow .ic svg{width:1.5em;height:1.5em}
+.arow b{display:block;font-weight:800;line-height:1.2}
+.arow small{color:var(--soft);font-size:.82em}
+.arow .st{display:flex;align-items:center;gap:.6em}
+.stars{color:var(--marigold);letter-spacing:.05em;font-size:1.1em;white-space:nowrap}
+.stars s{text-decoration:none;color:#E1E4F0}
+.go{background:var(--ink);color:#fff;border-radius:8px;padding:.35em 1em;font-weight:800;font-size:.9em}
+.go.again{background:var(--page);color:var(--ink)}
+.lockic{color:var(--faint);font-size:.85em}
 
-@media (max-width:760px){
-  .signin{grid-template-columns:1fr;gap:20px}
-  .hello h1{font-size:48px}
-  .grid2,.grid3{grid-template-columns:1fr}
-  .topbar{padding:12px 16px}
+/* activity */
+.act{display:grid;grid-template-rows:auto 1fr}
+.actHead{display:flex;align-items:center;gap:1em;padding:1.2vh 1.5vw;border-bottom:2px dashed var(--line)}
+.actHead h2{font-size:1.55em;margin-right:auto}
+.actHead h2 small{display:block;font-family:var(--sans);font-size:.5em;color:var(--soft)}
+.dots{display:flex;gap:4px}
+.dots i{width:12px;height:12px;border-radius:50%;background:var(--page);border:2px solid var(--line)}
+.dots i.ok{background:var(--leaf);border-color:var(--leaf)}
+.dots i.no{background:var(--magenta);border-color:var(--magenta)}
+.dots i.cur{border-color:var(--ink)}
+.help{border:2px solid var(--ink);border-radius:8px;padding:.25em .9em;font-weight:800}
+.help:hover{background:var(--page)}
+.x{color:var(--soft);font-weight:700;padding:.3em .6em;border-radius:8px}
+.x:hover{background:var(--page)}
+.qbody{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2vw;padding:2vh 2vw;align-items:center}
+.qbody.solo{grid-template-columns:minmax(0,46em);justify-content:center}
+.vis{min-height:0;height:100%;display:flex;align-items:center;justify-content:center;background:#FAFBFF;border-radius:12px;padding:1vh}
+.vis svg{max-width:100%;max-height:100%;width:auto;height:100%}
+.qside{min-height:0;display:flex;flex-direction:column;justify-content:center;gap:1.6vh}
+.prompt{font-size:1.45em;font-weight:700;line-height:1.3}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:1vh}
+.opt{display:flex;align-items:center;gap:.7em;padding:1.2vh .9em;border:2px solid var(--line);border-radius:10px;text-align:left;font-weight:700;font-size:1.08em;background:#fff}
+.opt .k{flex:none;width:1.7em;height:1.7em;border-radius:6px;background:var(--page);display:grid;place-items:center;font-size:.8em}
+.opt:hover:not(:disabled){border-color:var(--cobalt)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--leaf);background:var(--goodbg)}
+.opt.right .k{background:var(--leaf);color:#fff}
+.opt.wrong{border-color:var(--magenta);background:var(--badbg)}
+.opt.wrong .k{background:var(--magenta);color:#fff}
+.numrow{display:flex;align-items:center;gap:.6em;flex-wrap:wrap}
+.numrow input{width:7.5em;font-size:1.5em;font-weight:800;padding:.3em .5em;border:2.5px solid var(--ink);border-radius:10px;text-align:center}
+.numrow .unit{color:var(--soft);font-weight:700}
+.fb{border-radius:12px;padding:1.2vh 1.1vw;display:none}
+.fb.show{display:block}
+.fb.ok{background:var(--goodbg)}
+.fb.no{background:var(--badbg)}
+.fb h3{font-size:1.5em}
+.fb ol{padding-left:1.3em;margin:.4vh 0;font-size:.95em}
+.fb .row{display:flex;justify-content:space-between;align-items:center;gap:1em;margin-top:.6vh}
+.tip{font-size:.85em;color:var(--soft)}
+
+/* fact lab */
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2vw;padding:2vh 2vw;min-height:0;align-items:center}
+.factCard{display:flex;flex-direction:column;align-items:center;gap:2vh}
+.fact{font-family:var(--hand);font-size:clamp(48px,11vh,110px);line-height:1}
+.fact.flash{animation:flash .5s}
+@keyframes flash{from{color:var(--leaf);transform:scale(1.06)}}
+.pad{display:grid;grid-template-columns:repeat(3,4.2em);gap:.8vh .6em}
+.pad button{background:var(--page);border-radius:10px;padding:1vh 0;font-weight:800;font-size:1.15em}
+.pad button:hover{background:#E4E6F3}
+.pad .enter{background:var(--ink);color:#fff}
+.labans{font-size:2em;font-weight:800;min-width:4em;text-align:center;border-bottom:3px solid var(--ink);min-height:1.3em}
+.mosaicBox{display:flex;flex-direction:column;align-items:center;gap:1vh;min-height:0;height:100%;justify-content:center}
+.mosaicBox svg{max-height:calc(100% - 4em);width:auto;max-width:100%}
+.mosaicBox p{color:var(--soft);font-size:.88em;text-align:center;max-width:26em}
+
+/* results + overlays */
+#overlay{position:fixed;inset:0;background:rgba(43,45,91,.55);display:grid;place-items:center;z-index:20;padding:2vh 2vw}
+.sheet{background:#fff;border-radius:16px;width:min(94vw,40em);max-height:96vh;overflow:auto;padding:3vh 2.4vw;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.sheet h2{font-size:2.6em}
+.sheet .stars{font-size:2.4em;margin:.6vh 0}
+.sheet p{color:var(--soft);margin:.6vh 0}
+.reward{display:flex;align-items:center;gap:1em;justify-content:center;background:var(--page);border-radius:12px;padding:1.2vh 1vw;margin:1.6vh 0}
+.reward svg,.reward .paperchip{width:4.5em;height:4.5em}
+.reward b{font-family:var(--hand);font-size:1.5em;font-weight:400;display:block}
+.paperchip{border-radius:8px;border:2px solid var(--ink)}
+.sheet .btns{display:flex;gap:.8em;justify-content:center;flex-wrap:wrap;margin-top:1.4vh}
+.tut{text-align:left;width:min(94vw,52em)}
+.tut h2{font-size:2.1em}
+.tut .idea{font-size:1.1em;font-weight:700;margin:.4vh 0 1.2vh}
+.tcols{display:grid;grid-template-columns:1fr 1.3fr;gap:1.6vw}
+.tcols ol{padding-left:1.2em;display:grid;gap:.6vh}
+.ex{background:#FAFBFF;border:2px dashed var(--line);border-radius:12px;padding:1.2vh 1vw}
+.ex h3{font-size:1.3em;margin-bottom:.4vh}
+.ex .vis{height:auto;max-height:22vh;background:none;padding:0;margin:.6vh 0}
+.ex .vis svg{height:auto;max-height:20vh}
+.ex ol{margin-top:.6vh}
+.ex .ans{margin-top:.8vh;font-weight:800;color:var(--leaf)}
+
+/* studio */
+.studio{display:grid;grid-template-columns:minmax(150px,13em) minmax(0,1fr) minmax(160px,15em);gap:clamp(8px,1.2vw,16px);min-height:0}
+.tools,.drawer{padding:1.4vh .9vw;display:flex;flex-direction:column;gap:1.1vh;min-height:0;overflow:auto}
+.tools h3,.drawer h3{font-size:1.25em}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--page);border-radius:10px;padding:3px}
+.seg button{padding:.4em;border-radius:8px;font-weight:800;font-size:.9em}
+.seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.sw{aspect-ratio:1;border-radius:50%;border:2px solid var(--line)}
+.sw.on{outline:3px solid var(--ink);outline-offset:1px}
+.sw.lock{background:repeating-linear-gradient(45deg,#EEF0F7 0 4px,#fff 4px 8px)!important;cursor:not-allowed}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{padding:.25em .65em;border-radius:999px;background:var(--page);font-size:.82em;font-weight:700}
+.chip.on{background:var(--ink);color:#fff}
+.chip.lock{opacity:.4;cursor:not-allowed}
+.selbox{background:var(--page);border-radius:10px;padding:.8vh .6vw;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.selbox button{background:#fff;border-radius:8px;padding:.35em 0;font-weight:800;font-size:.85em}
+.selbox button:hover{background:#E9EEFF}
+.selbox .del{color:var(--magenta)}
+.selbox p{grid-column:1/-1;font-size:.8em;color:var(--soft)}
+.canvasWrap{container-type:size;min-height:0;display:flex;align-items:center;justify-content:center}
+.board{position:relative;width:min(100cqw,100cqh * 4 / 3);aspect-ratio:4/3;border-radius:6px;box-shadow:0 0 0 2px var(--ink),6px 6px 0 var(--ink);overflow:hidden;touch-action:none;user-select:none}
+.board canvas{position:absolute;inset:0;width:100%;height:100%}
+.board.draw canvas{cursor:crosshair}
+.stk{position:absolute;left:0;top:0;transform-origin:center;cursor:grab;touch-action:none}
+.stk svg{display:block;width:100%;height:100%;pointer-events:none}
+.stk.sel{outline:2px dashed var(--cobalt);outline-offset:2px}
+.board.draw .stk{pointer-events:none}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sgrid button{aspect-ratio:1;background:var(--page);border-radius:10px;padding:6px;position:relative}
+.sgrid button:hover:not(:disabled){background:#E9EEFF}
+.sgrid button svg{width:100%;height:100%}
+.sgrid button:disabled{cursor:not-allowed}
+.sgrid button:disabled svg{filter:grayscale(1) brightness(1.6);opacity:.35}
+.note{font-size:.8em;color:var(--soft)}
+
+/* admin */
+.admin{padding:2vh 1.6vw;display:flex;flex-direction:column;gap:1.4vh;min-height:0}
+.admin h2{font-size:2em}
+.adminTop{display:flex;gap:.8em;align-items:center;flex-wrap:wrap}
+.adminTop h2{margin-right:auto}
+.tbl{overflow:auto;min-height:0;border:2px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.9em}
+th,td{padding:.55em .8em;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:var(--page);position:sticky;top:0;font-weight:800}
+tr.click{cursor:pointer}
+tr.click:hover td{background:#F7F8FD}
+.warn{background:#FFF4D6;border-radius:10px;padding:.8em 1em;font-size:.9em}
+.cols2{display:grid;grid-template-columns:1.3fr 1fr;gap:1.4vw;min-height:0}
+.ucell{display:inline-block;width:1.4em;height:1.4em;border-radius:4px;margin-right:2px;font-size:.7em;text-align:center;line-height:1.4em;color:#fff;font-weight:800}
+
+.toast{position:fixed;left:50%;bottom:3vh;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.6em 1.2em;border-radius:10px;z-index:40}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}
+.confetti i{position:absolute;top:-16px;width:10px;height:10px;border-radius:50%;animation:fall linear forwards}
+@keyframes fall{to{transform:translate(var(--dx),110vh)}}
+
+#print{display:none}
+@media print{
+  #app,#overlay{display:none!important}
+  #print{display:block;color:#000;font-family:var(--sans);font-size:11pt}
+  body{overflow:visible;background:#fff}
+  #print h1{font-size:26pt}#print h2{font-size:17pt;margin-top:14pt;page-break-after:avoid}
+  #print table{margin-top:4pt}#print td,#print th{white-space:normal;border:1px solid #bbb}
+  #print .u{page-break-inside:avoid}
 }
-@media (prefers-reduced-motion:no-preference){
-  .going .ic{animation:pulse 1s ease-in-out infinite alternate}
-  @keyframes pulse{to{transform:translateY(-6px)}}
+@media (max-width:820px){
+  .map,.cols2{grid-template-columns:1fr}
+  .studio{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .qbody,.lab{grid-template-columns:1fr}
+  body{overflow:auto}
 }
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important;transition:none!important}}
 </style>
 </head>
 <body>
-
-<div class="screen">
-  <header class="topbar">
-    <div class="brand" id="brand">Learning Portal</div>
-    <div class="clock" id="clock"></div>
-  </header>
-
-  <main>
-    <!-- STUDENT SIGN IN -->
-    <section id="sSignin" class="signin">
-      <div class="hello">
-        <h1 id="greet">Good morning.</h1>
-        <p>Sign in with your first name and your 4-digit PIN to open your programs.</p>
-      </div>
-      <form class="card" id="signinForm" autocomplete="off">
-        <div class="field">
-          <label for="sName">First name</label>
-          <input type="text" id="sName" autocomplete="off" autocapitalize="words" spellcheck="false" required>
-        </div>
-        <div class="field">
-          <label for="sPin">PIN</label>
-          <input type="password" id="sPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off" required>
-        </div>
-        <button class="btn wide" id="signinBtn" type="submit">Sign in</button>
-        <p class="msg bad" id="signinMsg" role="alert"></p>
-      </form>
-    </section>
-
-    <!-- PROGRAM CHOICE -->
-    <section id="sChoose" class="choose hidden">
-      <h1 id="chooseTitle"></h1>
-      <p class="sub">Pick a program.</p>
-      <div class="tiles" id="tiles"></div>
-      <div class="row" style="margin-top:24px">
-        <button class="btn plain" id="signoutBtn" type="button">Not you? Sign out</button>
-      </div>
-    </section>
-
-    <!-- OPENING ONE PROGRAM -->
-    <section id="sGoing" class="going hidden">
-      <div class="ic" id="goingIc"></div>
-      <h1 id="goingTitle"></h1>
-      <p class="sub" id="goingSub" style="color:var(--muted)"></p>
-    </section>
-
-    <!-- TEACHER SIGN IN -->
-    <section id="sTeacherIn" class="signin hidden">
-      <div class="hello">
-        <h1 id="tTitle">Teacher</h1>
-        <p id="tIntro">Enter the teacher password to manage programs and students.</p>
-      </div>
-      <form class="card" id="teacherForm" autocomplete="off">
-        <div class="field">
-          <label for="tPass">Teacher password</label>
-          <input type="password" id="tPass" autocomplete="off" required>
-        </div>
-        <div class="field hidden" id="tPass2Wrap">
-          <label for="tPass2">Type it again</label>
-          <input type="password" id="tPass2" autocomplete="off">
-        </div>
-        <button class="btn wide" id="teacherBtn" type="submit">Continue</button>
-        <p class="msg bad" id="teacherMsg" role="alert"></p>
-        <button class="linkbtn" type="button" data-go="student">Back to student sign-in</button>
-      </form>
-    </section>
-
-    <!-- TEACHER AREA -->
-    <section id="sTeacher" class="teacher hidden">
-      <div class="row" style="justify-content:space-between;margin-bottom:14px">
-        <h1 style="font:700 44px/1 var(--cond);margin:0">Portal setup</h1>
-        <div class="row">
-          <button class="btn plain small" id="changePassBtn" type="button">Change teacher password</button>
-          <button class="btn plain small" type="button" data-go="student">Leave teacher mode</button>
-        </div>
-      </div>
-      <div class="tabs" role="tablist">
-        <button class="tab" role="tab" data-tab="students" aria-selected="true">Students</button>
-        <button class="tab" role="tab" data-tab="programs" aria-selected="false">Programs</button>
-        <button class="tab" role="tab" data-tab="log" aria-selected="false">Sign-ins</button>
-      </div>
-      <p class="msg" id="adminMsg" role="status"></p>
-
-      <!-- Students tab -->
-      <div id="tabStudents">
-        <div id="studentList"></div>
-        <form class="form" id="studentForm" autocomplete="off">
-          <h3 id="studentFormTitle">Add a student</h3>
-          <div class="grid3">
-            <div class="field"><label for="fsName">First name</label>
-              <input type="text" id="fsName" autocomplete="off" required>
-              <p class="hint">Two boys with the same name? Add a last initial, like Moshe K.</p></div>
-            <div class="field"><label for="fsPin">4-digit PIN</label>
-              <input type="text" id="fsPin" class="pin" inputmode="numeric" maxlength="4" autocomplete="off">
-              <p class="hint" id="fsPinHint">Required.</p></div>
-          </div>
-          <label>Programs he can open</label>
-          <div class="checks" id="fsChecks"></div>
-          <div class="row">
-            <button class="btn" type="submit" id="fsSave">Save student</button>
-            <button class="btn plain" type="button" id="fsCancel">Clear</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Programs tab -->
-      <div id="tabPrograms" class="hidden">
-        <div id="programList"></div>
-        <form class="form" id="programForm" autocomplete="off">
-          <h3 id="programFormTitle">Add a program</h3>
-          <div class="grid2">
-            <div class="field"><label for="fpIcon">Icon</label>
-              <input type="text" id="fpIcon" maxlength="4" placeholder="📘"></div>
-            <div class="field"><label for="fpName">Name</label>
-              <input type="text" id="fpName" required placeholder="The Workshop"></div>
-            <div class="field"><label for="fpUrl">Link</label>
-              <input type="text" id="fpUrl" required placeholder="https://lockandload123.netlify.app/"></div>
-            <div class="field"><label for="fpSort">Order</label>
-              <input type="number" id="fpSort" value="0"></div>
-          </div>
-          <p class="hint" style="margin:-6px 0 14px">Copy the link from the address bar while the program is open, and paste it here.</p>
-          <div class="row">
-            <button class="btn" type="submit" id="fpSave">Save program</button>
-            <button class="btn plain" type="button" id="fpCancel">Clear</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Log tab -->
-      <div id="tabLog" class="hidden"><div id="logList"></div></div>
-    </section>
-  </main>
-
-  <div class="foot" id="foot"><button class="linkbtn" type="button" data-go="teacher">Teacher</button></div>
+<div id="app">
+  <header id="top"></header>
+  <main id="main"></main>
 </div>
-
-<script>
-/* ===== YOUR SUPABASE PROJECT (SCHOOL) ===== */
-var SUPABASE_URL = "https://belathxxgwayxdmiqvpd.supabase.co";
-var SUPABASE_KEY = "sb_publishable_Kxuxi919RbsmEk-p8iNt-w_zm6BsRI9";
-var IDLE_SECONDS = 90;   // the program list signs out by itself after this long
-
-/* ---------- helpers ---------- */
-function $(id){ return document.getElementById(id); }
-function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
-  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-function fixUrl(u){ u = (u || "").trim(); if (u && !/^https?:\/\//i.test(u)) u = "https://" + u; return u; }
-
-async function rpc(fn, args){
-  var r;
-  try {
-    r = await fetch(SUPABASE_URL + "/rest/v1/rpc/" + fn, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_KEY,
-                 "Authorization": "Bearer " + SUPABASE_KEY },
-      body: JSON.stringify(args || {})
-    });
-  } catch (e) {
-    throw new Error("No internet connection. Check the Wi-Fi and try again.");
-  }
-  var text = await r.text(), data = null;
-  try { data = text ? JSON.parse(text) : null; } catch (e) {}
-  if (!r.ok) {
-    var m = (data && (data.message || data.hint)) || ("Server error " + r.status);
-    if (/could not find the function|schema cache/i.test(m))
-      m = "The portal isn't set up in Supabase yet. Run portal_setup.sql first.";
-    throw new Error(m);
-  }
-  return data;
-}
-
-var screens = ["sSignin","sChoose","sGoing","sTeacherIn","sTeacher"];
-function show(id){
-  screens.forEach(function(s){ $(s).classList.toggle("hidden", s !== id); });
-  $("foot").classList.toggle("hidden", id !== "sSignin");
-}
-
-/* ---------- clock & greeting ---------- */
-function tick(){
-  var d = new Date(), h = d.getHours();
-  $("clock").textContent = d.toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}) +
-    "   " + d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});
-  $("greet").textContent = h < 12 ? "Good morning." : h < 17 ? "Good afternoon." : "Good evening.";
-}
-tick(); setInterval(tick, 15000);
-
-/* ---------- student flow ---------- */
-var idleTimer = null;
-function resetIdle(){
-  clearTimeout(idleTimer);
-  if (!$("sChoose").classList.contains("hidden")) idleTimer = setTimeout(signOut, IDLE_SECONDS * 1000);
-}
-["click","keydown","mousemove","touchstart"].forEach(function(ev){ document.addEventListener(ev, resetIdle, {passive:true}); });
-
-function signOut(){
-  clearTimeout(idleTimer);
-  $("tiles").innerHTML = "";
-  $("sName").value = ""; $("sPin").value = ""; $("signinMsg").textContent = "";
-  show("sSignin"); $("sName").focus();
-}
-$("signoutBtn").onclick = signOut;
-
-$("sPin").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); });
-
-$("signinForm").addEventListener("submit", async function(e){
-  e.preventDefault();
-  var name = $("sName").value.trim(), pin = $("sPin").value.trim(), msg = $("signinMsg");
-  msg.textContent = "";
-  if (!name) { msg.textContent = "Type your first name."; return; }
-  if (!/^\d{4}$/.test(pin)) { msg.textContent = "Your PIN is 4 numbers."; return; }
-  $("signinBtn").disabled = true;
-  try {
-    var res = await rpc("portal_login", { p_name: name, p_pin: pin });
-    if (!res || !res.ok) {
-      var err = res && res.error;
-      msg.textContent = err === "name" ? "That name isn't on the list. Check the spelling or ask your teacher."
-                      : err === "locked" ? "Too many wrong PINs. Wait 5 minutes, or ask your teacher to reset it."
-                      : "That PIN doesn't match. Try again.";
-      $("sPin").value = ""; $("sPin").focus();
-      return;
-    }
-    openFor(res);
-  } catch (err) {
-    msg.textContent = err.message;
-  } finally {
-    $("signinBtn").disabled = false;
-  }
-});
-
-function openFor(res){
-  var progs = res.programs || [];
-  if (progs.length === 0) {
-    $("signinMsg").textContent = "No programs are set up for you yet. Ask your teacher.";
-    return;
-  }
-  if (progs.length === 1) {
-    var p = progs[0];
-    $("goingIc").textContent = p.icon || "📘";
-    $("goingTitle").textContent = "Opening " + p.name;
-    $("goingSub").textContent = "Hi " + res.name + ". One moment.";
-    show("sGoing");
-    setTimeout(function(){ location.href = fixUrl(p.url); }, 900);
-    return;
-  }
-  $("chooseTitle").textContent = "Hi, " + res.name + ".";
-  $("tiles").innerHTML = progs.map(function(p){
-    return '<a class="tile" href="' + esc(fixUrl(p.url)) + '"><span class="ic">' + esc(p.icon || "📘") +
-           '</span><span class="nm">' + esc(p.name) + '</span></a>';
-  }).join("");
-  show("sChoose"); resetIdle();
-  var first = document.querySelector(".tile"); if (first) first.focus();
-}
-
-/* ---------- teacher sign in ---------- */
-var adminPass = null, adminIsNew = false, changingPass = false, data = {programs:[],students:[],log:[]};
-
-document.addEventListener("click", function(e){
-  var g = e.target.closest("[data-go]"); if (!g) return;
-  if (g.dataset.go === "teacher") openTeacher(false);
-  else { adminPass = null; location.hash = ""; signOut(); }
-});
-
-async function openTeacher(change){
-  changingPass = change;
-  $("tPass").value = ""; $("tPass2").value = ""; $("teacherMsg").textContent = "";
-  show("sTeacherIn");
-  if (change) {
-    adminIsNew = false;
-    $("tTitle").textContent = "New password";
-    $("tIntro").textContent = "Choose a new teacher password, at least 6 characters.";
-    $("tPass2Wrap").classList.remove("hidden");
-    $("teacherBtn").textContent = "Save new password";
-    $("tPass").focus(); return;
-  }
-  $("tTitle").textContent = "Teacher";
-  $("tIntro").textContent = "Checking setup…";
-  $("tPass2Wrap").classList.add("hidden");
-  $("teacherBtn").textContent = "Continue";
-  try {
-    var st = await rpc("portal_status");
-    adminIsNew = !st.admin_set;
-  } catch (err) { $("tIntro").textContent = ""; $("teacherMsg").textContent = err.message; return; }
-  if (adminIsNew) {
-    $("tTitle").textContent = "First-time setup";
-    $("tIntro").textContent = "Create a teacher password, at least 6 characters. You'll use it to add programs and students. Keep it private.";
-    $("tPass2Wrap").classList.remove("hidden");
-    $("teacherBtn").textContent = "Create password";
-  } else {
-    $("tIntro").textContent = "Enter the teacher password to manage programs and students.";
-  }
-  $("tPass").focus();
-}
-$("changePassBtn").onclick = function(){ openTeacher(true); };
-
-$("teacherForm").addEventListener("submit", async function(e){
-  e.preventDefault();
-  var p = $("tPass").value, p2 = $("tPass2").value, msg = $("teacherMsg");
-  msg.textContent = "";
-  $("teacherBtn").disabled = true;
-  try {
-    if (adminIsNew || changingPass) {
-      if (p.length < 6) throw new Error("Use at least 6 characters.");
-      if (p !== p2) throw new Error("The two passwords don't match.");
-      await rpc("portal_set_admin", { p_new: p, p_old: changingPass ? adminPass : null });
-      adminPass = p; changingPass = false;
-    } else {
-      var ok = await rpc("portal_admin_check", { p_pass: p });
-      if (!ok) throw new Error("That password is wrong.");
-      adminPass = p;
-    }
-    await loadAdmin();
-    show("sTeacher");
-  } catch (err) { msg.textContent = err.message; }
-  finally { $("teacherBtn").disabled = false; }
-});
-
-/* ---------- teacher area ---------- */
-function say(text, good){ var m = $("adminMsg"); m.textContent = text; m.className = "msg " + (good ? "good" : "bad"); }
-
-async function loadAdmin(){
-  data = await rpc("portal_admin_data", { p_pass: adminPass });
-  renderStudents(); renderPrograms(); renderLog();
-}
-
-document.querySelectorAll(".tab").forEach(function(t){
-  t.onclick = function(){
-    document.querySelectorAll(".tab").forEach(function(x){ x.setAttribute("aria-selected", x === t); });
-    $("tabStudents").classList.toggle("hidden", t.dataset.tab !== "students");
-    $("tabPrograms").classList.toggle("hidden", t.dataset.tab !== "programs");
-    $("tabLog").classList.toggle("hidden", t.dataset.tab !== "log");
-    say("");
-  };
-});
-
-function progName(id){ var p = data.programs.find(function(x){ return x.id === id; }); return p ? (p.icon + " " + p.name) : null; }
-
-function renderStudents(){
-  var el = $("studentList");
-  if (!data.students.length) {
-    el.innerHTML = '<div class="empty">No students yet. Add programs first, then add each boy below with a PIN.</div>';
-  } else {
-    el.innerHTML = '<div class="scroll"><table class="tbl"><thead><tr><th>Name</th><th>Programs</th><th></th></tr></thead><tbody>' +
-      data.students.map(function(s){
-        var names = (s.programs || []).map(progName).filter(Boolean);
-        return '<tr><td><strong>' + esc(s.name) + '</strong> ' + (s.locked ? '<span class="tag">Locked</span>' : '') + '</td>' +
-          '<td>' + (names.length ? esc(names.join(", ")) : '<span style="color:var(--muted)">None</span>') + '</td>' +
-          '<td class="act"><button class="btn plain small" data-edit-s="' + s.id + '">Edit</button> ' +
-          '<button class="btn danger small" data-del-s="' + s.id + '">Remove</button></td></tr>';
-      }).join("") + '</tbody></table></div>';
-  }
-  renderChecks([]);
-}
-
-function renderChecks(selected){
-  var box = $("fsChecks");
-  if (!data.programs.length) { box.innerHTML = '<span class="hint">Add programs in the Programs tab first.</span>'; return; }
-  box.innerHTML = data.programs.map(function(p){
-    return '<label><input type="checkbox" value="' + p.id + '"' + (selected.indexOf(p.id) >= 0 ? " checked" : "") +
-           '> ' + esc(p.icon + " " + p.name) + '</label>';
-  }).join("");
-}
-
-var editingStudent = null;
-function clearStudentForm(){
-  editingStudent = null;
-  $("studentFormTitle").textContent = "Add a student";
-  $("fsName").value = ""; $("fsPin").value = "";
-  $("fsPinHint").textContent = "Required.";
-  renderChecks([]);
-}
-$("fsCancel").onclick = clearStudentForm;
-$("fsPin").addEventListener("input", function(){ this.value = this.value.replace(/\D/g,"").slice(0,4); });
-
-$("studentList").addEventListener("click", async function(e){
-  var ed = e.target.closest("[data-edit-s]"), del = e.target.closest("[data-del-s]");
-  if (ed) {
-    var s = data.students.find(function(x){ return x.id === ed.dataset.editS; });
-    editingStudent = s.id;
-    $("studentFormTitle").textContent = "Edit " + s.name;
-    $("fsName").value = s.name; $("fsPin").value = "";
-    $("fsPinHint").textContent = "Leave blank to keep his PIN. Saving also unlocks him.";
-    renderChecks(s.programs || []);
-    $("fsName").focus();
-  }
-  if (del) {
-    var s2 = data.students.find(function(x){ return x.id === del.dataset.delS; });
-    if (!confirm("Remove " + s2.name + " from the portal? His progress inside each program is not affected.")) return;
-    try { await rpc("portal_delete_student", { p_pass: adminPass, p_id: s2.id }); await loadAdmin(); clearStudentForm(); say(s2.name + " removed.", true); }
-    catch (err) { say(err.message); }
-  }
-});
-
-$("studentForm").addEventListener("submit", async function(e){
-  e.preventDefault();
-  var pin = $("fsPin").value.trim();
-  if (pin && !/^\d{4}$/.test(pin)) { say("The PIN must be exactly 4 digits."); return; }
-  var progs = Array.prototype.map.call($("fsChecks").querySelectorAll("input:checked"), function(c){ return c.value; });
-  $("fsSave").disabled = true;
-  try {
-    await rpc("portal_save_student", { p_pass: adminPass, p_id: editingStudent, p_name: $("fsName").value,
-                                       p_pin: pin || null, p_programs: progs });
-    var nm = $("fsName").value.trim();
-    await loadAdmin(); clearStudentForm(); say(nm + " saved.", true); $("fsName").focus();
-  } catch (err) { say(err.message); }
-  finally { $("fsSave").disabled = false; }
-});
-
-function renderPrograms(){
-  var el = $("programList");
-  if (!data.programs.length) {
-    el.innerHTML = '<div class="empty">No programs yet. Add each program below with its link.</div>';
-    return;
-  }
-  el.innerHTML = '<div class="scroll"><table class="tbl"><thead><tr><th>Program</th><th>Link</th><th>Order</th><th></th></tr></thead><tbody>' +
-    data.programs.map(function(p){
-      return '<tr><td><strong>' + esc(p.icon + " " + p.name) + '</strong></td>' +
-        '<td class="url"><a href="' + esc(fixUrl(p.url)) + '" target="_blank" rel="noopener">' + esc(p.url) + '</a></td>' +
-        '<td>' + esc(p.sort) + '</td>' +
-        '<td class="act"><button class="btn plain small" data-edit-p="' + p.id + '">Edit</button> ' +
-        '<button class="btn danger small" data-del-p="' + p.id + '">Remove</button></td></tr>';
-    }).join("") + '</tbody></table></div>';
-}
-
-var editingProgram = null;
-function clearProgramForm(){
-  editingProgram = null;
-  $("programFormTitle").textContent = "Add a program";
-  $("fpIcon").value = ""; $("fpName").value = ""; $("fpUrl").value = ""; $("fpSort").value = data.programs.length + 1;
-}
-$("fpCancel").onclick = clearProgramForm;
-
-$("programList").addEventListener("click", async function(e){
-  var ed = e.target.closest("[data-edit-p]"), del = e.target.closest("[data-del-p]");
-  if (ed) {
-    var p = data.programs.find(function(x){ return x.id === ed.dataset.editP; });
-    editingProgram = p.id;
-    $("programFormTitle").textContent = "Edit " + p.name;
-    $("fpIcon").value = p.icon; $("fpName").value = p.name; $("fpUrl").value = p.url; $("fpSort").value = p.sort;
-    $("fpName").focus();
-  }
-  if (del) {
-    var p2 = data.programs.find(function(x){ return x.id === del.dataset.delP; });
-    if (!confirm("Remove " + p2.name + " from the portal? Students will no longer see it here. The program itself is not deleted.")) return;
-    try { await rpc("portal_delete_program", { p_pass: adminPass, p_id: p2.id }); await loadAdmin(); clearProgramForm(); say(p2.name + " removed.", true); }
-    catch (err) { say(err.message); }
-  }
-});
-
-$("programForm").addEventListener("submit", async function(e){
-  e.preventDefault();
-  var url = fixUrl($("fpUrl").value);
-  $("fpSave").disabled = true;
-  try {
-    await rpc("portal_save_program", { p_pass: adminPass, p_id: editingProgram, p_name: $("fpName").value,
-      p_url: url, p_icon: $("fpIcon").value, p_sort: parseInt($("fpSort").value, 10) || 0 });
-    var nm = $("fpName").value.trim();
-    await loadAdmin(); clearProgramForm(); say(nm + " saved.", true); $("fpName").focus();
-  } catch (err) { say(err.message); }
-  finally { $("fpSave").disabled = false; }
-});
-
-function renderLog(){
-  var el = $("logList");
-  if (!data.log.length) { el.innerHTML = '<div class="empty">No one has signed in through the portal yet.</div>'; return; }
-  el.innerHTML = '<p class="hint" style="margin:0 0 10px">The last 300 portal sign-ins. What each boy does inside a program shows on that program\'s own dashboard.</p>' +
-    '<div class="scroll"><table class="tbl"><thead><tr><th>When</th><th>Student</th></tr></thead><tbody>' +
-    data.log.map(function(l){
-      var d = new Date(l.at);
-      return '<tr><td>' + esc(d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}) + ", " +
-        d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})) + '</td><td>' + esc(l.name) + '</td></tr>';
-    }).join("") + '</tbody></table></div>';
-}
-
-/* ---------- start ---------- */
-if (location.hash === "#teacher") openTeacher(false); else { show("sSignin"); $("sName").focus(); }
-</script>
+<div id="overlay" class="hidden"></div>
+<div id="print"></div>
+<script src="config.js"></script>
+<script src="engine.js"></script>
+<script src="stickers.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
